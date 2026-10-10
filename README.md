@@ -2,9 +2,9 @@
 
 Create an animated workflow for your GitHub README.
 
-[Open the generator](https://infinuts.github.io/readme-flow-svg/)
+[Open the generator](https://readme-flow-svg.vercel.app/) · [GitHub Pages mirror](https://infinuts.github.io/readme-flow-svg/)
 
-[![Upload → Validate → Compress → Download](https://readme-flow-svg.artfulchime2.chatgpt.site/svg?steps=Upload;Validate;Compress;Download&theme=github&traveler=file)](https://readme-flow-svg.artfulchime2.chatgpt.site/r)
+[![Upload → Validate → Compress → Download](https://readme-flow-svg.vercel.app/svg?steps=Upload;Validate;Compress;Download&theme=github&traveler=file)](https://readme-flow-svg.vercel.app/r)
 
 Enter three to six steps and watch a dot, file, or another icon move through them. The preview updates as you edit. You can change the labels and stage icons, reorder steps, and adjust the loop duration.
 
@@ -28,12 +28,12 @@ The SVG contains its own animation and icons. It doesn't need scripts, remote fo
 
 Use the link button above the preview to share your settings. Opening that URL recreates the workflow in the editor. Your most recent settings are also saved in your browser.
 
-The editor is hosted on GitHub Pages. A separate image service generates SVGs from URL parameters. Shared editor links reopen the controls; image links return `image/svg+xml`.
+Vercel hosts the editor and image API. The editor is also available on GitHub Pages. Shared editor links reopen the controls; image links return `image/svg+xml`.
 
 ## Image URLs
 
 ```markdown
-[![Workflow](https://readme-flow-svg.artfulchime2.chatgpt.site/svg?steps=Upload;Validate;Compress;Download&theme=github&traveler=file)](https://readme-flow-svg.artfulchime2.chatgpt.site/r)
+[![Workflow](https://readme-flow-svg.vercel.app/svg?steps=Upload;Validate;Compress;Download&theme=github&traveler=file)](https://readme-flow-svg.vercel.app/r)
 ```
 
 `steps` accepts semicolon-separated labels or a JSON array. The other options are `preset`, `theme`, `traveler`, `duration` (2 to 10 seconds), `icons` (a JSON array), and `customTheme` (a JSON object of hex colors). The generator encodes these for you, including labels containing semicolons.
@@ -42,15 +42,26 @@ The `/r` route redirects to this repository. Git.io stopped accepting new short 
 
 ## Generate with AI
 
-The [readme-flow-svg skill](./skills/readme-flow-svg/SKILL.md) teaches an agent how to choose steps and return an SVG or hosted Markdown embed. Copy its folder into your client's skill directory.
+The [readme-flow-svg skill](./skills/readme-flow-svg/SKILL.md) teaches an agent how to choose steps and return an SVG or hosted Markdown embed. The repo includes setup for Codex and Claude Code:
+
+| Harness | Instructions | Skill | MCP configuration |
+| --- | --- | --- | --- |
+| Codex | [AGENTS.md](./AGENTS.md) | [.agents/skills/readme-flow-svg](./.agents/skills/readme-flow-svg/SKILL.md) | [.codex/config.toml](./.codex/config.toml) |
+| Claude Code | [CLAUDE.md](./CLAUDE.md) | [.claude/skills/readme-flow-svg](./.claude/skills/readme-flow-svg/SKILL.md) | [.mcp.json](./.mcp.json) |
+
+Open the checkout in either harness, trust the project or approve its MCP connection when prompted, and ask it to generate a README workflow. Invoke `$readme-flow-svg` in Codex or `/readme-flow-svg` in Claude Code. No API key or service login is required.
+
+To use the skill in another project, copy the skill folder and MCP configuration into that project. For user-wide skills, use `~/.agents/skills/` for Codex or `~/.claude/skills/` for Claude Code. See the official [Codex skill locations](https://developers.openai.com/codex/skills) and [Claude skill locations](https://code.claude.com/docs/en/skills).
+
+Edit `skills/readme-flow-svg/SKILL.md` and run `npm run sync:skills` to update both harness copies. `npm test` checks that they stay in sync.
 
 The hosted MCP endpoint is:
 
 ```text
-https://readme-flow-svg.artfulchime2.chatgpt.site/mcp
+https://readme-flow-svg.vercel.app/mcp
 ```
 
-It exposes `generate_workflow` and `list_options`. The managed endpoint uses OAuth; install the readme-flow-svg integration in ChatGPT, or connect through an MCP client that supports Streamable HTTP and OAuth. The SVG and REST generation endpoints remain public.
+It exposes `generate_workflow` and `list_options` through public Streamable HTTP. Any compatible MCP client can connect without OAuth. Both tools generate output or list settings; they do not edit files or publish changes.
 
 For a local stdio server that doesn't require a service login, clone the repository and run:
 
@@ -102,7 +113,9 @@ The public generator is available at the link above. If you want to host your ow
 
 All asset paths are relative, so both `username.github.io` and `username.github.io/readme-flow-svg/` work. You can also host the contents of `dist/` on any static host.
 
-The image service is a Cloudflare Worker in `worker/index.js`. Run `npm run build:api` to build it into `dist/server/index.js`; that replaces the static build output. `.openai/hosting.json` configures its Sites deployment. Run `npm run build` again to restore the GitHub Pages artifact. Forks can use the public image service or replace `SERVICE_URL` in `src/links.js` with their own deployment.
+For the editor, SVG API, and HTTP MCP together, import the repo into Vercel. The included `vercel.json` defines the build, static output, and API routes. The main repo is connected to Vercel, so pushes deploy automatically. Forks can use the public image service or replace `SERVICE_URL` in `src/links.js` with their own production domain and update the MCP configurations and source skill.
+
+The HTTP handler lives in `server/handler.js`, with Vercel adapters in `api/`. `npm run build:api` creates and verifies a standalone API bundle in `.api-build/` without replacing the static build. Vercel builds the adapters directly. No `.openai` files are needed; local deployment metadata and environment files are ignored by Git.
 
 ## Contribute
 

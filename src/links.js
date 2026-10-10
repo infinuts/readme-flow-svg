@@ -1,7 +1,7 @@
 import {normalizeConfig,PRESETS} from './svg.js';
 
-export const SERVICE_URL='https://readme-flow-svg.artfulchime2.chatgpt.site';
-export const EDITOR_URL='https://infinuts.github.io/readme-flow-svg/';
+export const SERVICE_URL='https://readme-flow-svg.vercel.app';
+export const EDITOR_URL=SERVICE_URL+'/';
 export const REPO_URL='https://github.com/infinuts/readme-flow-svg';
 
 export function workflowParams(raw) {

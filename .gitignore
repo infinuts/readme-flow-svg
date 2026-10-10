@@ -4,3 +4,11 @@ site.tar.gz
 node_modules/
 .preview.log
 .qa/
+.openai/
+.vercel/
+.api-build/
+.env
+.env.*
+.claude/settings.local.json
+
+.vercel

@@ -1,0 +1,13 @@
+.git
+.qa
+.openai
+.agents
+.claude
+.codex
+node_modules
+dist
+.api-build
+examples
+tests
+skills
+site.tar.gz

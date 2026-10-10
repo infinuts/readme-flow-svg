@@ -11,7 +11,7 @@ Use the connected `generate_workflow` MCP tool. Call `list_options` when you nee
 
 If MCP is unavailable, POST the configuration as JSON to:
 
-`https://readme-flow-svg.artfulchime2.chatgpt.site/generate`
+`https://readme-flow-svg.vercel.app/generate`
 
 For example:
 

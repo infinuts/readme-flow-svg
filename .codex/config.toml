@@ -1,0 +1,3 @@
+# Codex loads this project config after the checkout is trusted.
+[mcp_servers.readme_flow_svg]
+url = "https://readme-flow-svg.vercel.app/mcp"

@@ -1,11 +1,21 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import worker from '../worker/index.js';
+import worker from '../server/handler.js';
+import svgRoute from '../api/svg.js';
+import generateRoute from '../api/generate.js';
 import {normalizeConfig,renderSvg} from '../src/svg.js';
 import {imageUrl,workflowMarkdown,parseWorkflowParams} from '../src/links.js';
 import {Client} from '@modelcontextprotocol/client';
 import {StdioClientTransport} from '@modelcontextprotocol/client/stdio';
 import {resolve} from 'node:path';
+
+test('Vercel adapters preserve URL settings, request bodies and HTTP methods',async()=>{
+  const response=await svgRoute.fetch(new Request('https://example.com/api/svg?steps=Build;Test;Ship&traveler=rocket'));
+  assert.equal(response.status,200);assert.ok((await response.text()).includes('data-element="rocket"'));
+  const head=await svgRoute.fetch(new Request('https://example.com/api/svg',{method:'HEAD'}));assert.equal(head.status,200);assert.equal(await head.text(),'');
+  const generated=await generateRoute.fetch(new Request('https://example.com/api/generate',{method:'POST',body:JSON.stringify({steps:['Build','Test','Ship'],theme:'github'})}));
+  assert.equal(generated.status,200);assert.equal((await generated.json()).config.theme,'github');
+});
 
 test('hosted image URLs preserve exact steps, icons, custom colors and motion',async()=>{
   const config=normalizeConfig({steps:['Read; parse','Validate [input]','Ship & smile'],icons:['file','shield','deploy'],theme:'custom',customTheme:{accent:'#fc9',background:'#0c1420'},traveler:'rocket',duration:4});

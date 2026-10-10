@@ -1,5 +1,5 @@
 import {ICONS,PRESETS,STEP_ICONS,TRAVELERS,THEMES,THEME_LABELS,THEME_FIELDS,normalizeConfig,renderSvg} from './svg.js';
-import {workflowMarkdown} from './links.js';
+import {workflowMarkdown,EDITOR_URL} from './links.js';
 const $=id=>document.getElementById(id);
 const icon=name=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]||ICONS.file}</svg>`;
 document.querySelectorAll('[data-icon]').forEach(el=>el.innerHTML=icon(el.dataset.icon));
@@ -123,7 +123,7 @@ async function copy(text,message){
 $('copy-markdown').addEventListener('click',()=>copy(markdown(),$('embed-mode').value==='local'?'Markdown copied. Add workflow.svg to your repo.':'Markdown copied. Paste it directly into your README.'));
 $('copy-code').addEventListener('click',()=>copy(activeTab==='markdown'?markdown():renderSvg(config),'Code copied to clipboard.'));
 $('download').addEventListener('click',()=>{const blob=new Blob([renderSvg(config)],{type:'image/svg+xml;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='workflow.svg';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('SVG downloaded. Your README is ready for some flow.');});
-$('share').addEventListener('click',()=>{const url=new URL(location.protocol==='file:'?'https://infinuts.github.io/readme-flow-svg/':location.href);url.search='';url.hash='';for(const [k,v]of Object.entries(config)){if(k==='customTheme'&&config.theme!=='custom')continue;url.searchParams.set(k,typeof v==='object'?JSON.stringify(v):v);}copy(url.href,'Editor link copied. All your settings included.');});
+$('share').addEventListener('click',()=>{const url=new URL(location.protocol==='file:'?EDITOR_URL:location.href);url.search='';url.hash='';for(const [k,v]of Object.entries(config)){if(k==='customTheme'&&config.theme!=='custom')continue;url.searchParams.set(k,typeof v==='object'?JSON.stringify(v):v);}copy(url.href,'Editor link copied. All your settings included.');});
 for(const [name,preset]of Object.entries(PRESETS)){
   if(!$('preset').querySelector(`option[value="${name}"]`)){const option=document.createElement('option');option.value=name;option.textContent=preset.name;$('preset').append(option);}
   const button=document.createElement('button');button.className='example';button.dataset.preset=name;

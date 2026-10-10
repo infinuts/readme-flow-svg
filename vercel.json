@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "functions": {"api/*.js": {"maxDuration": 15}},
+  "rewrites": [
+    {"source": "/svg", "destination": "/api/svg"},
+    {"source": "/generate", "destination": "/api/generate"},
+    {"source": "/options", "destination": "/api/options"},
+    {"source": "/mcp", "destination": "/api/mcp"},
+    {"source": "/r", "destination": "/api/r"}
+  ]
+}

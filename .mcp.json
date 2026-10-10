@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "readme-flow-svg": {
+      "type": "http",
+      "url": "https://readme-flow-svg.vercel.app/mcp"
+    }
+  }
+}

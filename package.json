@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "node scripts/serve.mjs",
     "build": "node scripts/build.mjs",
-    "test": "node --test tests/*.test.mjs",
+    "test": "node scripts/sync-skills.mjs --check && node --test tests/*.test.mjs",
+    "sync:skills": "node scripts/sync-skills.mjs",
     "build:api": "node scripts/build-api.mjs",
     "mcp": "node mcp/stdio.mjs"
   },

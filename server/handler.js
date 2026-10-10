@@ -5,7 +5,13 @@ import {parseWorkflowParams,EDITOR_URL,REPO_URL} from '../src/links.js';
 const mcp=createMcpHandler(createServer,{maxRequestBodySize:16384});
 const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET, HEAD, POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Accept, MCP-Protocol-Version, MCP-Session-Id','Access-Control-Expose-Headers':'MCP-Session-Id, MCP-Protocol-Version','X-Content-Type-Options':'nosniff'};
 const json=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:{...cors,'Content-Type':'application/json; charset=utf-8'}});
-export default {
+export function route(path) {
+  return {fetch(request) {
+    const url=new URL(request.url);url.pathname=path;
+    return handler.fetch(new Request(url,request));
+  }};
+}
+const handler={
   async fetch(request) {
     const url=new URL(request.url);
     if(request.method==='OPTIONS')return new Response(null,{status:204,headers:cors});
@@ -34,3 +40,4 @@ export default {
     return json({error:'Not found.'},404);
   }
 };
+export default handler;
