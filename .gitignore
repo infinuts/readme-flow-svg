@@ -1,0 +1,6 @@
+dist/
+site.tar.gz
+.scaffold/
+node_modules/
+.preview.log
+.qa/
