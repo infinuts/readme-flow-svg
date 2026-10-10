@@ -164,6 +164,12 @@ For the editor, SVG API, and HTTP MCP together, import the repo into Vercel. The
 
 The HTTP handler lives in `server/handler.js`, with Vercel adapters in `api/`. `npm run build:api` creates and verifies a standalone API bundle in `.api-build/` without replacing the static build. Vercel builds the adapters directly. No `.openai` files are needed; local deployment metadata and environment files are ignored by Git.
 
+## Example gallery and community
+
+The [live gallery](https://readme-flow-svg.vercel.app/#gallery) shows six animated workflows: CI/CD, ETL, authentication, onboarding, file processing, and AI inference. Each **Use this** button loads the complete example into the editor, including its theme, icons, layout, and connections.
+
+Using a workflow in your README? Add your repository to [community/repos.json](./community/repos.json) and open a pull request with a link to the README. Accepted entries appear in the website's [community showcase](https://readme-flow-svg.vercel.app/#community). See [the contribution guide](./CONTRIBUTING.md#add-your-repository-to-the-showcase) for the format and steps. You can submit through GitHub without installing anything.
+
 ## Contribute
 
 Presets, palettes, and icons live in `src/svg.js`. Add moving elements to `TRAVELERS`. The editor is in `src/app.js`, with its layout and styles in `index.html` and `src/style.css`.

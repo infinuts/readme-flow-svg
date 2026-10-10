@@ -1,6 +1,8 @@
 import {ICONS,PRESETS,STEP_ICONS,TRAVELERS,THEMES,THEME_LABELS,THEME_FIELDS,normalizeConfig,renderSvg,workflowGeometry} from './svg.js';
 import {workflowMarkdown,EDITOR_URL,SERVICE_URL,parseWorkflowParams,workflowParams} from './links.js';
 import {parseFont,outlineSvg} from './fonts.js';
+import {GALLERY} from './gallery.js';
+import {COMMUNITY_REPOS} from './community.js';
 const $=id=>document.getElementById(id);
 const icon=name=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]||ICONS.file}</svg>`;
 document.querySelectorAll('[data-icon]').forEach(el=>el.innerHTML=icon(el.dataset.icon));
@@ -155,11 +157,21 @@ $('download').addEventListener('click',()=>{const blob=new Blob([currentSvg()],{
 $('share').addEventListener('click',()=>{const url=new URL(location.protocol==='file:'?EDITOR_URL:location.href);url.search=workflowParams(config);url.hash='';copy(url.href,'Editor link copied. All your settings included.');});
 for(const [name,preset]of Object.entries(PRESETS)){
   if(!$('preset').querySelector(`option[value="${name}"]`)){const option=document.createElement('option');option.value=name;option.textContent=preset.name;$('preset').append(option);}
-  const button=document.createElement('button');button.className='example';button.dataset.preset=name;
-  button.innerHTML=`<div class="example-top"><span class="example-icon">${icon(preset.icons[0])}</span><span class="example-link">${icon('arrow')}</span></div><h3>${preset.name}</h3><p>${preset.description}</p><div class="example-steps">${preset.steps.map(step=>`<span>${step}</span>`).join('<i>→</i>')}</div>`;
-  $('examples').append(button);
 }
-document.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click',()=>{choosePreset(b.dataset.preset);document.querySelector('.builder').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});toast(PRESETS[b.dataset.preset].name+' preset loaded.');}));
+for(const example of GALLERY){
+  const card=document.createElement('article');card.className='gallery-card';
+  card.innerHTML=`<div class="gallery-preview"><img src="./assets/gallery/${example.id}.svg" alt="${example.name} animated workflow" width="730" height="300"></div><div class="gallery-caption"><div><h3>${example.name}</h3><p>${example.description}</p></div><button type="button" class="button secondary" data-gallery="${example.id}" aria-label="Use ${example.name} workflow">Use this ${icon('arrow')}</button></div>`;
+  card.querySelector('.gallery-preview').style.backgroundColor=THEMES[example.config.theme].background;
+  card.querySelector('button').addEventListener('click',()=>{config=normalizeConfig(example.config);paused=false;updatePause();syncControls();document.querySelector('.builder').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});$('workflow-title').focus({preventScroll:true});toast(example.name+' workflow loaded. Make it yours.');});
+  $('examples').append(card);
+}
+for(const repository of COMMUNITY_REPOS){
+  const card=document.createElement('a');card.className='community-card';card.href='https://github.com/'+repository.repo;card.target='_blank';card.rel='noopener noreferrer';
+  const name=document.createElement('h3');name.textContent=repository.repo;
+  const description=document.createElement('p');description.textContent=repository.description;
+  const action=document.createElement('span');action.textContent='See the README ↗';
+  card.append(name,description,action);$('community-repos').append(card);
+}
 const extraControls={'workflow-title':'title','workflow-subtitle':'subtitle',layout:'layout',columns:'columns','connection-mode':'connectionMode',routing:'routing','line-style':'lineStyle','line-width':'lineWidth',arrows:'arrows',font:'font','google-font':'googleFont','font-weight':'fontWeight',spacing:'spacing',radius:'radius','traveler-size':'travelerSize','show-numbers':'showNumbers',transparent:'transparent'};
 for(const [id,key]of Object.entries(extraControls))$(id).addEventListener('input',()=>{
   const input=$(id);
