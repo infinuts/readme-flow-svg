@@ -1,3 +1,4 @@
+import {withAltText} from './markdown.js';
 import {ICONS,PRESETS,STEP_ICONS,TRAVELERS,THEMES,THEME_LABELS,THEME_FIELDS,normalizeConfig,renderSvg,workflowGeometry} from './svg.js';
 import {workflowMarkdown,EDITOR_URL,SERVICE_URL,parseWorkflowParams,workflowParams} from './links.js';
 import {parseFont,outlineSvg} from './fonts.js';
@@ -32,11 +33,16 @@ try {
   else {const saved=localStorage.getItem('readme-flow-config');if(saved) config=normalizeConfig(JSON.parse(saved));}
 } catch { toast('Could not load saved settings. Starting with a fresh workflow.'); }
 function toast(message){$('toast').textContent=message;$('toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('visible'),3500);}
-function markdown(){return workflowMarkdown(config,$('embed-mode').value==='local');}
+function markdown(){
+  const output=workflowMarkdown(config,$('embed-mode').value==='local');
+  return withAltText(output,$('alt-text').value);
+}
+$('alt-text').addEventListener('input',updateCode);
 $('embed-mode').addEventListener('change',()=>{updateCode();$('embed-hint').innerHTML=$('embed-mode').value==='local'?'Add <code>workflow.svg</code> to your repo, then paste this line in your README.':'Paste this line in your README. The image is generated from your settings.';});
 function updateCode(){$('code').textContent=activeTab==='markdown'?markdown():currentSvg();$('code-content').setAttribute('aria-labelledby',activeTab==='markdown'?'markdown-tab':'svg-tab');}
 function render(){
   $('preview').innerHTML=currentSvg(config,paused);
+  $('preview').querySelector('svg').setAttribute('role','group');
   $('preview').style.setProperty('--svg-width',$('preview').querySelector('svg').getAttribute('width')+'px');
   const palette=config.theme==='custom'?config.customTheme:THEMES[config.theme],canvas=$('preview-canvas');
   canvas.className='preview-canvas';
@@ -153,16 +159,16 @@ async function copy(text,message){
 }
 $('copy-markdown').addEventListener('click',()=>copy(markdown(),$('embed-mode').value==='local'?'Markdown copied. Add workflow.svg to your repo.':'Markdown copied. Paste it directly into your README.'));
 $('copy-code').addEventListener('click',()=>copy(activeTab==='markdown'?markdown():currentSvg(),'Code copied to clipboard.'));
-$('download').addEventListener('click',()=>{const blob=new Blob([currentSvg()],{type:'image/svg+xml;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='workflow.svg';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('SVG downloaded. Your README is ready for some flow.');});
+$('download').addEventListener('click',()=>{const blob=new Blob([currentSvg()],{type:'image/svg+xml;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='workflow.svg';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('SVG downloaded.');});
 $('share').addEventListener('click',()=>{const url=new URL(location.protocol==='file:'?EDITOR_URL:location.href);url.search=workflowParams(config);url.hash='';copy(url.href,'Editor link copied. All your settings included.');});
 for(const [name,preset]of Object.entries(PRESETS)){
   if(!$('preset').querySelector(`option[value="${name}"]`)){const option=document.createElement('option');option.value=name;option.textContent=preset.name;$('preset').append(option);}
 }
 for(const example of GALLERY){
   const card=document.createElement('article');card.className='gallery-card';
-  card.innerHTML=`<div class="gallery-preview"><img src="./assets/gallery/${example.id}.svg" alt="${example.name} animated workflow" width="730" height="300"></div><div class="gallery-caption"><div><h3>${example.name}</h3><p>${example.description}</p></div><button type="button" class="button secondary" data-gallery="${example.id}" aria-label="Use ${example.name} workflow">Use this ${icon('arrow')}</button></div>`;
+  card.innerHTML=`<div class="gallery-preview"><img src="./assets/gallery/${example.id}.svg" alt="${example.name} animated workflow" width="730" height="300" loading="lazy" decoding="async"></div><div class="gallery-caption"><div><h3>${example.name}</h3><p>${example.description}</p></div><button type="button" class="button secondary" data-gallery="${example.id}" aria-label="Use ${example.name} workflow">Use this ${icon('arrow')}</button></div>`;
   card.querySelector('.gallery-preview').style.backgroundColor=THEMES[example.config.theme].background;
-  card.querySelector('button').addEventListener('click',()=>{config=normalizeConfig(example.config);paused=false;updatePause();syncControls();document.querySelector('.builder').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});$('workflow-title').focus({preventScroll:true});toast(example.name+' workflow loaded. Make it yours.');});
+  card.querySelector('button').addEventListener('click',()=>{config=normalizeConfig(example.config);paused=false;updatePause();syncControls();document.querySelector('.builder').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});$('workflow-title').closest('details').open=true;$('workflow-title').focus({preventScroll:true});toast(example.name+' workflow loaded. Make it yours.');});
   $('examples').append(card);
 }
 for(const repository of COMMUNITY_REPOS){
@@ -209,7 +215,7 @@ function capturePositions(){
   const box=svg.viewBox.baseVal;config.canvasSize={width:box.width,height:Math.max(420,box.height)};
 }
 function moveCard(index,x,y){
-  const header=workflowGeometry(config).header,p=config.positions[index];
+  const header=workflowGeometry(config).header;
   config.positions[index]={x:Math.round(Math.max(70,Math.min(config.canvasSize.width-70,x))),y:Math.round(Math.max(header+60,Math.min(config.canvasSize.height-70,y)))};
 }
 $('preview').addEventListener('pointerdown',event=>{
