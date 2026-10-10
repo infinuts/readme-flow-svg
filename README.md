@@ -74,6 +74,20 @@ The `/r` route redirects to this repository. Git.io stopped accepting new short 
 
 ## Generate with AI
 
+Install the skill into your current project with the [Skills CLI](https://github.com/vercel-labs/skills):
+
+```sh
+npx skills add infinuts/readme-flow-svg --skill readme-flow-svg
+```
+
+For Codex and Claude Code across all your projects:
+
+```sh
+npx skills add infinuts/readme-flow-svg --skill readme-flow-svg --global --agent codex --agent claude-code
+```
+
+The CLI installs the skill from this public GitHub repo; no separate npm package is needed. The skill can generate workflows through the public REST API immediately. To use MCP tools, add the connection described below. Installing a skill does not configure MCP automatically.
+
 The [readme-flow-svg skill](./skills/readme-flow-svg/SKILL.md) teaches an agent how to choose steps and return an SVG or hosted Markdown embed. The repo includes setup for Codex and Claude Code:
 
 | Harness | Instructions | Skill | MCP configuration |
