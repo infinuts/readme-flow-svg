@@ -44,13 +44,15 @@ The `/r` route redirects to this repository. Git.io stopped accepting new short 
 
 The [readme-flow-svg skill](./skills/readme-flow-svg/SKILL.md) teaches an agent how to choose steps and return an SVG or hosted Markdown embed. Copy its folder into your client's skill directory.
 
-The public MCP endpoint is:
+The hosted MCP endpoint is:
 
 ```text
 https://readme-flow-svg.artfulchime2.chatgpt.site/mcp
 ```
 
-It exposes `generate_workflow` and `list_options`. Connect it in an MCP client that supports Streamable HTTP. For a local stdio server, clone the repository and run:
+It exposes `generate_workflow` and `list_options`. The managed endpoint uses OAuth; install the readme-flow-svg integration in ChatGPT, or connect through an MCP client that supports Streamable HTTP and OAuth. The SVG and REST generation endpoints remain public.
+
+For a local stdio server that doesn't require a service login, clone the repository and run:
 
 ```sh
 npm ci
