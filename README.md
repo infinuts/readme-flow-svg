@@ -1,4 +1,4 @@
-# readme-flow-svg
+# <img src="./assets/logo.svg" width="42" height="42" alt=""> readme-flow-svg
 
 Create an animated workflow for your GitHub README.
 
@@ -6,18 +6,22 @@ Create an animated workflow for your GitHub README.
 
 ![Upload → Validate → Compress → Download](./examples/light.svg)
 
-Enter three to six steps and watch a dot or file move through them. The preview updates as you edit. You can change the labels and icons, reorder stages, adjust the loop duration, and choose a light, dark, or terminal theme.
+Enter three to six steps and watch a dot, file, or another icon move through them. The preview updates as you edit. You can change the labels and stage icons, reorder steps, and adjust the loop duration.
+
+Choose Light, Dark, Terminal, GitHub, Ocean, or Sunset, or make a custom theme with your own colors. The moving element picker includes a rocket, package, code, spark, heart, and lightning bolt. The dot has a subtle pulse, and movement eases between stages.
 
 The generator runs in your browser. You don't need an account or your own deployment.
 
 ## Add a workflow to your README
 
-1. Open the generator and choose a preset: File processing, API request, or Deployment.
+1. Open the generator and choose a preset: File processing, API request, Deployment, Data pipeline, Authentication, or AI inference.
 2. Edit the steps and choose how the animation looks.
 3. Download `workflow.svg` and put it beside your repository's README.
 4. Paste the copied Markdown: `![Your workflow](./workflow.svg)`.
 
 Adding a step opens an icon picker. Click the icon beside any existing step to change it. Each icon stays with its step when you reorder the workflow.
+
+Choose Custom in the theme picker to edit the background, cards, labels, accent, borders, active stages, step numbers, and connections. Your palette and moving element are included in downloaded SVGs and shared editor links.
 
 The SVG contains its own animation and icons. It doesn't need scripts, remote fonts, or an image service.
 
@@ -54,9 +58,9 @@ All asset paths are relative, so both `username.github.io` and `username.github.
 
 ## Contribute
 
-Presets, palettes, and stage icons live in `src/svg.js`. The editor is in `src/app.js`, with its layout and styles in `index.html` and `src/style.css`.
+Presets, palettes, and icons live in `src/svg.js`. Add moving elements to `TRAVELERS`. The editor is in `src/app.js`, with its layout and styles in `index.html` and `src/style.css`.
 
-To add a theme, define its colors in `THEMES` and add a matching picker in `index.html` and `src/style.css`. Run `npm run build` to regenerate the browser script and example SVGs. The preview and downloads use the same renderer.
+To add a theme, define its colors in `THEMES` and its name in `THEME_LABELS`. The theme picker updates automatically. Run `npm run build` to regenerate the browser script and example SVGs. The preview and downloads use the same renderer.
 
 Keep exported SVGs self-contained. Preserve XML escaping and reduced-motion support, and avoid scripts, foreign objects, or external assets.
 

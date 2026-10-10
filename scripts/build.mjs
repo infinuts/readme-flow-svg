@@ -1,6 +1,6 @@
 import {mkdir,copyFile,cp,writeFile,rm} from 'node:fs/promises';
 import {resolve,dirname} from 'node:path';
-import {renderSvg} from '../src/svg.js';
+import {renderSvg,THEMES} from '../src/svg.js';
 import {bundle} from './bundle.mjs';
 await bundle();
 const dist=resolve('dist');
@@ -9,8 +9,9 @@ await rm(dist,{recursive:true,force:true});
 await mkdir('dist',{recursive:true});
 await copyFile('index.html','dist/index.html');
 await cp('src','dist/src',{recursive:true});
+await cp('assets','dist/assets',{recursive:true});
 await copyFile('THIRD_PARTY_LICENSES.md','dist/THIRD_PARTY_LICENSES.md');
 await writeFile('dist/.nojekyll','');
 await mkdir('examples',{recursive:true});
-for(const theme of ['light','dark','terminal'])await writeFile(`examples/${theme}.svg`,renderSvg({theme}));
+for(const theme of Object.keys(THEMES))await writeFile(`examples/${theme}.svg`,renderSvg({theme}));
 console.log('Built static site in dist/. Ready for GitHub Pages.');
