@@ -1,6 +1,7 @@
 import {McpServer} from '@modelcontextprotocol/server';
 import * as z from 'zod/v4';
-import {normalizeConfig,renderSvg,PRESETS,THEMES,TRAVELERS,STEP_ICONS,THEME_FIELDS,LAYOUTS,FONTS} from '../src/svg.js';
+import {normalizeConfig,renderSvg,PRESETS,THEMES,TRAVELERS,STEP_ICONS,THEME_FIELDS,LAYOUTS,FONTS,validFontFamily} from '../src/svg.js';
+import {googleFontSvg} from '../server/google-fonts.mjs';
 import {imageUrl,editorUrl,workflowMarkdown} from '../src/links.js';
 
 const color=z.string().regex(/^#[a-f0-9]{3}([a-f0-9]{3})?$/i);
@@ -18,6 +19,8 @@ export const workflowSchema=z.object({
   connections:z.array(z.object({from:z.number().int().min(0).max(11),to:z.number().int().min(0).max(11),label:z.string().max(24).optional()})).max(24).optional(),
   lineStyle:z.enum(['solid','dashed','dotted']).optional(),lineWidth:z.number().min(1).max(4).optional(),arrows:z.boolean().optional(),
   spacing:z.number().min(32).max(120).optional(),radius:z.number().min(0).max(24).optional(),font:z.enum(Object.keys(FONTS)).optional(),showNumbers:z.boolean().optional(),transparent:z.boolean().optional(),travelerSize:z.number().min(.6).max(1.8).optional(),
+  googleFont:z.string().refine(validFontFamily,'Use a Google Font family name.').optional(),fontWeight:z.number().int().min(100).max(900).optional(),
+  positions:z.array(z.object({x:z.number().min(70).max(2500),y:z.number().min(60).max(2100)}).nullable()).max(12).optional(),canvasSize:z.object({width:z.number().min(220).max(2600),height:z.number().min(204).max(2200)}).nullable().optional(),
   customTheme:z.object(Object.fromEntries(Object.keys(THEME_FIELDS).map(key=>[key,color.optional()]))).optional()
 }).superRefine((value,ctx)=>{
   const count=value.steps?.length||PRESETS[value.preset||'files'].steps.length,seen=new Set();
@@ -31,6 +34,9 @@ export function generateWorkflow(raw={}) {
   const config=normalizeConfig(workflowSchema.parse(raw));
   return {svg:renderSvg(config),image_url:imageUrl(config),markdown:workflowMarkdown(config),editor_url:editorUrl(config),config};
 }
+export async function generateWorkflowAsync(raw={}) {
+  const output=generateWorkflow(raw);output.svg=await googleFontSvg(output.svg,output.config);return output;
+}
 export function options() {
   return {presets:PRESETS,themes:THEMES,travelers:TRAVELERS,stage_icons:STEP_ICONS,layouts:LAYOUTS,fonts:FONTS,limits:{steps:[3,12],connections:24,duration:[2,30],title:80,subtitle:140,connection_label:24},custom_theme_fields:THEME_FIELDS,defaults:normalizeConfig()};
 }
@@ -40,8 +46,8 @@ export function createServer() {
   server.registerTool('generate_workflow',{
     title:'Generate an animated README workflow',
     description:'Generate an animated SVG and Markdown embed from 3–12 steps. Supports titles, subtitles, horizontal/vertical/snake/grid layouts, labeled custom connections (zero-based from/to step indices), branches, loops, line styles, spacing, fonts, transparent backgrounds, themes and icons. Returns SVG source, image URL, Markdown, and editor link. Custom connections animate in array order; set connectionMode to custom to use them.',
-    inputSchema:workflowSchema,annotations
-  },async args=>{const output=generateWorkflow(args);return {content:[{type:'text',text:JSON.stringify(output)}],structuredContent:output};});
+    inputSchema:workflowSchema,annotations:{...annotations,openWorldHint:true}
+  },async args=>{const output=await generateWorkflowAsync(args);return {content:[{type:'text',text:JSON.stringify(output)}],structuredContent:output};});
   server.registerTool('list_options',{
     title:'List workflow presets, themes, and icons',
     description:'List supported presets, theme palettes, moving elements, stage icons, and custom color fields.',

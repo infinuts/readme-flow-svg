@@ -5,6 +5,7 @@
   "outputDirectory": "dist",
   "functions": {"api/*.js": {"maxDuration": 15}},
   "rewrites": [
+    {"source": "/font", "destination": "/api/font"},
     {"source": "/svg", "destination": "/api/svg"},
     {"source": "/generate", "destination": "/api/generate"},
     {"source": "/options", "destination": "/api/options"},

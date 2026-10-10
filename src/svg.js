@@ -75,7 +75,8 @@ export function escapeXml(value) {
   return String(value).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g,'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
 }
 export const LAYOUTS={horizontal:'Horizontal',vertical:'Vertical',snake:'Snake / multiple rows',grid:'Grid'};
-export const FONTS={sans:'Sans serif',mono:'Monospace',serif:'Serif'};
+export const FONTS={sans:'Sans serif',mono:'Monospace',serif:'Serif',google:'Google Fonts'};
+export const validFontFamily=value=>typeof value==='string'&&/^[\p{L}\p{N}][\p{L}\p{N} .-]{0,79}$/u.test(value.trim());
 const bounded=(value,min,max,fallback)=>Number.isFinite(Number(value))?Math.max(min,Math.min(max,Number(value))):fallback;
 export function normalizeConfig(raw={}) {
   const preset=Object.hasOwn(PRESETS,raw.preset)?raw.preset:'files';
@@ -94,7 +95,7 @@ export function normalizeConfig(raw={}) {
   return {preset,steps:steps.map((s,i)=>s||'Step '+(i+1)),icons,theme:raw.theme==='custom'||Object.hasOwn(THEMES,raw.theme)?raw.theme:'light',customTheme:normalizePalette(raw.customTheme),traveler:Object.hasOwn(TRAVELERS,raw.traveler)?raw.traveler:'dot',duration:Math.max(2,Math.min(30,Number(raw.duration)||6)),
     title:String(raw.title||'').slice(0,80),subtitle:String(raw.subtitle||'').slice(0,140),layout:Object.hasOwn(LAYOUTS,raw.layout)?raw.layout:PRESETS[preset].layout||'horizontal',columns:Math.round(bounded(raw.columns??PRESETS[preset].columns??3,2,6,3)),
     connectionMode:(raw.connectionMode??(PRESETS[preset].connections?'custom':'sequential'))==='custom'?'custom':'sequential',connections:edges,routing:['curved','elbow','straight'].includes(raw.routing)?raw.routing:'curved',lineStyle:['solid','dashed','dotted'].includes(raw.lineStyle)?raw.lineStyle:'solid',lineWidth:bounded(raw.lineWidth??1.5,1,4,1.5),arrows:raw.arrows!==false,
-    spacing:bounded(raw.spacing??54,32,120,54),radius:bounded(raw.radius??12,0,24,12),font:Object.hasOwn(FONTS,raw.font)?raw.font:'sans',showNumbers:raw.showNumbers!==false,transparent:raw.transparent===true,travelerSize:bounded(raw.travelerSize??1,.6,1.8,1)};
+    spacing:bounded(raw.spacing??54,32,120,54),radius:bounded(raw.radius??12,0,24,12),font:Object.hasOwn(FONTS,raw.font)?raw.font:'sans',googleFont:validFontFamily(raw.googleFont)?raw.googleFont.trim():'Roboto',fontWeight:Math.round(bounded(raw.fontWeight??400,100,900,400)),positions:Array.isArray(raw.positions)&&raw.positions.some(p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y))?steps.map((_,i)=>{const p=raw.positions[i];return p&&Number.isFinite(p.x)&&Number.isFinite(p.y)?{x:Math.round(bounded(p.x,70,2500,70)),y:Math.round(bounded(p.y,60,2100,60))}:null;}):[],canvasSize:raw.canvasSize&&Number.isFinite(raw.canvasSize.width)&&Number.isFinite(raw.canvasSize.height)?{width:Math.round(bounded(raw.canvasSize.width,220,2600,680)),height:Math.round(bounded(raw.canvasSize.height,204,2200,420))}:null,showNumbers:raw.showNumbers!==false,transparent:raw.transparent===true,travelerSize:bounded(raw.travelerSize??1,.6,1.8,1)};
 }
 function renderClassicSvg(raw={},paused=false) {
   const c=normalizeConfig(raw), t=c.theme==='custom'?c.customTheme:THEMES[c.theme], n=c.steps.length, gap=172, width=gap*(n-1)+164, x0=82, y=156;
@@ -108,7 +109,7 @@ function renderClassicSvg(raw={},paused=false) {
     const inactive=`fill:${t.card};stroke:${t.border}`,active=`fill:${t.tint};stroke:${t.accent}`;
     const keys=i===0?`0%,${(end-.01).toFixed(3)}%{${active}}${end.toFixed(3)}%,100%{${inactive}}`:`0%,${(start-.01).toFixed(3)}%,${end.toFixed(3)}%,100%{${inactive}}${start.toFixed(3)}%,${(end-.01).toFixed(3)}%{${active}}`;
     const icon=ICONS[c.icons[i]];
-    return `<style>@keyframes stage${i}{${keys}}</style><g><rect class="stage animated" style="animation-name:stage${i}" x="${x-59}" y="43" width="118" height="95" rx="12" fill="${t.card}" stroke="${t.border}"/><text x="${x-45}" y="62" fill="${t.muted}" font-size="9">${String(i+1).padStart(2,'0')}</text><g transform="translate(${x-12} 65)" fill="none" stroke="${t.accent}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${icon}</g><text x="${x}" y="116" fill="${t.text}" text-anchor="middle" font-size="12" font-weight="500"${label.length>15?' textLength="102" lengthAdjust="spacingAndGlyphs"':''}>${escapeXml(label)}</text><circle cx="${x}" cy="${y}" r="3" fill="${t.line}"/></g>`;
+    return `<style>@keyframes stage${i}{${keys}}</style><g data-step="${i}"><rect class="stage animated" style="animation-name:stage${i}" x="${x-59}" y="43" width="118" height="95" rx="12" fill="${t.card}" stroke="${t.border}"/><text x="${x-45}" y="62" fill="${t.muted}" font-size="9">${String(i+1).padStart(2,'0')}</text><g transform="translate(${x-12} 65)" fill="none" stroke="${t.accent}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${icon}</g><text x="${x}" y="116" fill="${t.text}" text-anchor="middle" font-size="12" font-weight="500"${label.length>15?' textLength="102" lengthAdjust="spacingAndGlyphs"':''}>${escapeXml(label)}</text><circle cx="${x}" cy="${y}" r="3" fill="${t.line}"/></g>`;
   }).join('');
   const connectors=Array.from({length:n-1},(_,i)=>{const x=x0+i*gap;return `<path d="M${x+64} 91h43m-5-4 5 4-5 4" stroke="${t.line}" fill="none" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>`;}).join('');
   const traveler=c.traveler==='dot'?`<circle class="dot-halo animated" cx="${x0}" cy="${y}" r="9" fill="${t.accent}" opacity=".13"/><circle cx="${x0}" cy="${y}" r="4.5" fill="${t.accent}"/>`:`<g transform="translate(${x0-12} ${y-12})"><rect x="-2" y="-2" width="28" height="28" rx="7" fill="${t.tint}"/><g transform="translate(3 3) scale(.75)" fill="none" stroke="${t.accent}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICONS[TRAVELERS[c.traveler].icon]}</g></g>`;
@@ -121,10 +122,11 @@ export function workflowGeometry(raw={}) {
   const left=(width-(cols*118+(cols-1)*c.spacing))/2;
   const nodes=c.steps.map((_,i)=>{const row=Math.floor(i/cols),col=c.layout==='snake'&&row%2?cols-1-i%cols:i%cols;return {x:left+59+col*(118+c.spacing),y:header+96+row*(96+c.spacing)};});
   const edges=c.connectionMode==='custom'?c.connections:Array.from({length:n-1},(_,i)=>({from:i,to:i+1,label:''}));
-  return {width,height,header,nodes,edges};
+  for(let i=0;i<n;i++)if(c.positions[i])nodes[i]={x:c.positions[i].x,y:Math.max(header+60,c.positions[i].y)};
+  return {width:c.positions.length?Math.max(c.canvasSize?.width||width,...nodes.map(p=>p.x+80)):width,height:c.positions.length?Math.max(c.canvasSize?.height||height,...nodes.map(p=>p.y+70)):height,header,nodes,edges};
 }
 function curveBetween(a,b,c,g) {
-  const horizontal=a.y===b.y,sign=horizontal?Math.sign(b.x-a.x):Math.sign(b.y-a.y);
+  const horizontal=a.y===b.y,sign=(horizontal?Math.sign(b.x-a.x):Math.sign(b.y-a.y))||1;
   const start=horizontal?{x:a.x+sign*60,y:a.y}:{x:a.x,y:a.y+sign*49};
   const end=horizontal?{x:b.x-sign*60,y:b.y}:{x:b.x,y:b.y-sign*49};
   if(g.edges.some(e=>g.nodes[e.from]===b&&g.nodes[e.to]===a)){if(horizontal){start.y-=sign*12;end.y-=sign*12;}else{start.x+=sign*12;end.x+=sign*12;}}
@@ -170,7 +172,7 @@ function curveBetween(a,b,c,g) {
 }
 function renderWorkflowSvg(raw={},paused=false) {
   const c=normalizeConfig(raw);
-  if(c.steps.length<=6&&!c.title&&!c.subtitle&&c.layout==='horizontal'&&c.connectionMode==='sequential'&&c.routing==='curved'&&c.lineStyle==='solid'&&c.lineWidth===1.5&&c.arrows&&c.spacing===54&&c.radius===12&&c.font==='sans'&&c.showNumbers&&!c.transparent&&c.travelerSize===1)return renderClassicSvg(c,paused);
+  if(!c.positions.length&&c.steps.length<=6&&!c.title&&!c.subtitle&&c.layout==='horizontal'&&c.connectionMode==='sequential'&&c.routing==='curved'&&c.lineStyle==='solid'&&c.lineWidth===1.5&&c.arrows&&c.spacing===54&&c.radius===12&&c.font==='sans'&&c.showNumbers&&!c.transparent&&c.travelerSize===1)return renderClassicSvg(c,paused);
   const t=c.theme==='custom'?c.customTheme:THEMES[c.theme],g=workflowGeometry(c),m=g.edges.length;
   const font=c.font==='mono'||(c.font==='sans'&&c.theme==='terminal')?'monospace':c.font==='serif'?'Georgia, serif':'-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif';
   const fit=(text,width,size)=>text.length*size*.6>width?` textLength="${width}" lengthAdjust="spacingAndGlyphs"`:'';

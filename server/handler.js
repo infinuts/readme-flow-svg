@@ -1,5 +1,6 @@
 import {createMcpHandler} from '@modelcontextprotocol/server';
-import {createServer,generateWorkflow,options} from '../mcp/server.mjs';
+import {createServer,generateWorkflowAsync,options} from '../mcp/server.mjs';
+import {googleFontBytes} from './google-fonts.mjs';
 import {parseWorkflowParams,EDITOR_URL,REPO_URL} from '../src/links.js';
 
 const mcp=createMcpHandler(createServer,{maxRequestBodySize:16384});
@@ -20,10 +21,14 @@ const handler={
       return new Response(response.body,{status:response.status,headers});
     }
     if(url.pathname==='/r'&&['GET','HEAD'].includes(request.method))return new Response(null,{status:302,headers:{...cors,Location:REPO_URL,'Cache-Control':'public, max-age=3600'}});
+    if(url.pathname==='/font'&&request.method==='GET'){
+      try{const bytes=await googleFontBytes(url.searchParams.get('family'),Number(url.searchParams.get('weight')||400));return new Response(bytes,{headers:{...cors,'Content-Type':'font/ttf','Cache-Control':'public, max-age=86400, s-maxage=604800'}});}
+      catch(error){return json({error:error.message},400);}
+    }
     if(url.pathname==='/svg'&&['GET','HEAD'].includes(request.method)){
       if(url.search.length>8192)return json({error:'Workflow URL is too long.'},414);
       try{
-        const output=generateWorkflow(parseWorkflowParams(url.searchParams));
+        const output=await generateWorkflowAsync(parseWorkflowParams(url.searchParams));
         const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(output.svg));
         const etag='"'+Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('')+'"';
         const headers={...cors,'Content-Type':'image/svg+xml; charset=utf-8','Cache-Control':'public, max-age=3600, s-maxage=86400',ETag:etag,'Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'"};
@@ -33,7 +38,7 @@ const handler={
     }
     if(url.pathname==='/generate'&&request.method==='POST'){
       const body=await request.text();if(new TextEncoder().encode(body).length>16384)return json({error:'Request is too large.'},413);
-      try{return json(generateWorkflow(JSON.parse(body)));}catch{return json({error:'Invalid workflow configuration.'},400);}
+      try{return json(await generateWorkflowAsync(JSON.parse(body)));}catch(error){return json({error:error.message.startsWith('Google')?error.message:'Invalid workflow configuration or font could not be loaded.'},400);}
     }
     if(url.pathname==='/options'&&request.method==='GET')return json(options());
     if(url.pathname==='/'&&['GET','HEAD'].includes(request.method))return json({name:'readme-flow-svg image service',generator:EDITOR_URL,image:'/svg?steps=Upload;Validate;Compress;Download',generate:'/generate',mcp:'/mcp',repository:REPO_URL});

@@ -34,6 +34,10 @@ Rounded paths and square elbows route around cards. Direct lines join endpoints 
 
 Under **Appearance & spacing**, change the font, space between cards, corner radius, and moving element size. Hide step numbers or export with a transparent background. Loops can run for 2–30 seconds.
 
+Grab a card in the live preview to arrange it by hand. Connections and their animations follow the new positions. Keyboard users can focus a card and use arrow keys to move it, or hold Shift for larger moves. Positions stay with cards when you reorder steps and are included in shared links, hosted images, and downloads. Click **Reset positions**, or choose a different layout, to return to automatic placement.
+
+Choose **Google Fonts** in the font picker, then type any Google Font family name and choose a supported weight. The suggestions are a starting point; you can enter other families from [Google Fonts](https://fonts.google.com/). Fonts need an internet connection when first loaded. The editor and image API turn the lettering into SVG paths so the font looks the same in GitHub README embeds and downloaded files. Font requests send the family and weight, without workflow text. Invalid family names or unsupported weights show an error; try Regular (400) or another available weight.
+
 ![A release pipeline arranged across three rows](./examples/release.svg)
 
 The SVG contains its own animation and icons. It doesn't need scripts, remote fonts, or an image service.
@@ -58,7 +62,9 @@ Vercel hosts the editor and image API. The editor is also available on GitHub Pa
 | `routing`, `lineStyle` | `curved`, `elbow`, or `straight`; `solid`, `dashed`, or `dotted` |
 | `lineWidth`, `arrows` | 1–4; `true` or `false` |
 | `spacing`, `radius` | 32–120 pixels; 0–24 pixels |
-| `font`, `showNumbers`, `transparent` | `sans`, `mono`, or `serif`; boolean flags |
+| `font`, `showNumbers`, `transparent` | `sans`, `mono`, `serif`, or `google`; boolean flags |
+| `googleFont`, `fontWeight` | Google Font family name; supported weight from 100–900 |
+| `positions`, `canvasSize` | Array of `{x, y}` card centers (or `null` for automatic positions); `{width, height}` in SVG pixels |
 | `duration`, `travelerSize` | 2–30 seconds; 0.6–1.8 scale |
 | `preset`, `theme`, `traveler`, `icons`, `customTheme` | Supported names from `/options`, an icon array, and a palette object |
 
@@ -115,9 +121,10 @@ Without MCP, POST a JSON configuration to `/generate` on the image service. It r
 
 Download or clone this repository and open `index.html` in your browser. The editor works without a server.
 
-To change the editor, use Node.js 22 or newer. Its static build doesn't need installed dependencies. Tests, the image service, and MCP use the packages installed by `npm ci`.
+To change the editor, use Node.js 22 or newer and install dependencies with `npm ci`. The build bundles the font engine into a browser script, so the built editor still works when opening `index.html` directly.
 
 ```sh
+npm ci
 npm run build
 npm run dev
 ```

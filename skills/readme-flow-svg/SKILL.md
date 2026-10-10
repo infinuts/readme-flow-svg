@@ -34,6 +34,10 @@ For branches, merges, and loops, set `connectionMode: "custom"` and provide up t
 
 Use `routing: "curved"` or `"elbow"` to avoid cards, or `"straight"` for direct lines. `lineStyle` accepts `solid`, `dashed`, or `dotted`; `lineWidth` is 1–4, and `arrows` is boolean. Other options: `spacing` (32–120), `radius` (0–24), `font` (`sans`, `mono`, `serif`), `showNumbers` and `transparent` (booleans), and `travelerSize` (0.6–1.8). Keep the smallest set of options that explains the project clearly.
 
+For a Google Font, set `font: "google"`, `googleFont` to a family name, and `fontWeight` to a supported integer weight (100–900, default 400). The service downloads the font using only its family and weight and converts lettering to paths. Do not add remote stylesheets or font URLs to the SVG. If the requested family or weight is unavailable, report the error and use an available weight or a font the user accepts.
+
+Manual card placement uses `positions`, an array aligned with the steps of `{x, y}` centers or `null` for automatic placement. Coordinates are SVG pixels: x 70–2500 and y 60–2100. `canvasSize` optionally sets `{width, height}` (220–2600 by 204–2200). The editor supports drag and keyboard placement and includes these settings in image URLs. Prefer an automatic layout unless the user wants specific positions.
+
 ## Deliver
 
 Use the returned `markdown` for a hosted embed that works without uploading a file. Give the editor link when the user may want to adjust the result. If the user requests an SVG file, save the returned `svg` to the requested location; the hosted URL is an image response, not the editor.

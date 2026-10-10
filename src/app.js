@@ -1,9 +1,29 @@
-import {ICONS,PRESETS,STEP_ICONS,TRAVELERS,THEMES,THEME_LABELS,THEME_FIELDS,normalizeConfig,renderSvg} from './svg.js';
-import {workflowMarkdown,EDITOR_URL,parseWorkflowParams,workflowParams} from './links.js';
+import {ICONS,PRESETS,STEP_ICONS,TRAVELERS,THEMES,THEME_LABELS,THEME_FIELDS,normalizeConfig,renderSvg,workflowGeometry} from './svg.js';
+import {workflowMarkdown,EDITOR_URL,SERVICE_URL,parseWorkflowParams,workflowParams} from './links.js';
+import {parseFont,outlineSvg} from './fonts.js';
 const $=id=>document.getElementById(id);
 const icon=name=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]||ICONS.file}</svg>`;
 document.querySelectorAll('[data-icon]').forEach(el=>el.innerHTML=icon(el.dataset.icon));
 let config=normalizeConfig(), paused=false, activeTab='markdown',toastTimer,iconStep=null;
+const fontCache=new Map();let fontTimer,drag=null,dragFrame;
+const fontKey=()=>config.googleFont+':'+config.fontWeight;
+function currentSvg(settings=config,isPaused=false){const svg=renderSvg(settings,isPaused),entry=fontCache.get(settings.googleFont+':'+settings.fontWeight);return settings.font==='google'&&entry?.font?outlineSvg(svg,entry.font,settings.googleFont):svg;}
+function updateFont(){
+  $('google-font-fields').hidden=config.font!=='google';
+  const key=fontKey(),entry=fontCache.get(key),ready=config.font!=='google'||!!entry?.font;
+  for(const id of ['download','copy-markdown','copy-code'])$(id).disabled=!ready;
+  const message=config.font!=='google'?'':entry?.font?'Font ready. Included in your SVG.':entry?.error||'Loading Google Font…';
+  if($('font-status').textContent!==message)$('font-status').textContent=message;
+  $('retry-font').hidden=!entry?.error;
+  clearTimeout(fontTimer);if(config.font!=='google'||entry)return;
+  fontTimer=setTimeout(async()=>{
+    fontCache.set(key,{loading:true});
+    try{const query=new URLSearchParams({family:config.googleFont,weight:String(config.fontWeight)}),response=await fetch(SERVICE_URL+'/font?'+query,{signal:AbortSignal.timeout(20000)});if(!response.ok)throw Error((await response.json()).error||'Could not load this font.');fontCache.set(key,{font:parseFont(await response.arrayBuffer())});}
+    catch(error){fontCache.set(key,{error:error.message||'Could not load this font. Try again.'});}
+    while(fontCache.size>8)fontCache.delete(fontCache.keys().next().value);
+    if(config.font==='google'&&fontKey()===key)render();
+  },350);
+}
 try {
   const query=new URLSearchParams(location.search);
   if(query.size) config=normalizeConfig(parseWorkflowParams(query));
@@ -12,25 +32,28 @@ try {
 function toast(message){$('toast').textContent=message;$('toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('visible'),3500);}
 function markdown(){return workflowMarkdown(config,$('embed-mode').value==='local');}
 $('embed-mode').addEventListener('change',()=>{updateCode();$('embed-hint').innerHTML=$('embed-mode').value==='local'?'Add <code>workflow.svg</code> to your repo, then paste this line in your README.':'Paste this line in your README. The image is generated from your settings.';});
-function updateCode(){$('code').textContent=activeTab==='markdown'?markdown():renderSvg(config);$('code-content').setAttribute('aria-labelledby',activeTab==='markdown'?'markdown-tab':'svg-tab');}
+function updateCode(){$('code').textContent=activeTab==='markdown'?markdown():currentSvg();$('code-content').setAttribute('aria-labelledby',activeTab==='markdown'?'markdown-tab':'svg-tab');}
 function render(){
-  $('preview').innerHTML=renderSvg(config,paused);
+  $('preview').innerHTML=currentSvg(config,paused);
   $('preview').style.setProperty('--svg-width',$('preview').querySelector('svg').getAttribute('width')+'px');
   const palette=config.theme==='custom'?config.customTheme:THEMES[config.theme],canvas=$('preview-canvas');
   canvas.className='preview-canvas';
   canvas.style.backgroundColor=palette.background;
   canvas.style.backgroundImage=`radial-gradient(${palette.line} .8px,transparent .8px)`;
   canvas.style.setProperty('--canvas-meta',palette.muted);
-  $('custom-theme-preview').innerHTML=renderSvg({...config,theme:'custom'},paused);
+  $('custom-theme-preview').innerHTML=currentSvg({...config,theme:'custom'},paused);
   $('workflow-name').textContent=config.title||PRESETS[config.preset].name+' workflow';
   $('preview-meta').textContent=`${config.steps.length} steps · ${config.duration}s loop`;
   $('step-count').textContent=`${config.steps.length} / 12`;
   $('add-step').disabled=config.steps.length>=12;
   $('columns').disabled=!['snake','grid'].includes(config.layout);
-  $('preview-canvas').classList.toggle('multi-row',config.layout!=='horizontal');
+  $('preview-canvas').classList.toggle('multi-row',config.layout!=='horizontal'||config.positions.length>0);
   $('preview-canvas').classList.toggle('vertical-layout',config.layout==='vertical');
   $('speed-value').textContent=config.duration+'s';
   updateCode();
+  updateFont();
+  $('reset-positions').disabled=!config.positions.length;
+  for(const card of $('preview').querySelectorAll('[data-step]')){card.setAttribute('tabindex','0');card.setAttribute('role','button');card.setAttribute('aria-label',`Move ${config.steps[Number(card.dataset.step)]} card. Use arrow keys to move.`);}
   try{localStorage.setItem('readme-flow-config',JSON.stringify(config));}catch{/* Storage can be disabled; exports still work. */}
 }
 function renderSteps(){
@@ -40,10 +63,10 @@ function renderSteps(){
     row.innerHTML=`<div class="step-controls"><button class="reorder-button" aria-label="Move step ${i+1} up" title="Move up" ${i===0?'disabled':''}>⌃</button><button class="reorder-button" aria-label="Move step ${i+1} down" title="Move down" ${i===config.steps.length-1?'disabled':''}>⌄</button></div><div class="step-input"><button class="step-icon-button" aria-label="Choose icon for step ${i+1}" title="Choose icon: ${STEP_ICONS[config.icons[i]]}" aria-haspopup="dialog" aria-controls="icon-picker">${icon(config.icons[i])}</button><input maxlength="32" aria-label="Step ${i+1} label" placeholder="Step ${i+1}"><button class="icon-button remove-step" aria-label="Remove step ${i+1}" title="Remove step" ${config.steps.length<=3?'disabled':''}>${icon('close')}</button></div>`;
     const input=row.querySelector('input');input.value=label;
     input.addEventListener('input',()=>{config.steps[i]=input.value;render();});
-    input.addEventListener('blur',()=>{config=normalizeConfig(config);input.value=config.steps[i];renderConnections();render();});
+    input.addEventListener('blur',()=>{const previous=input.value;config=normalizeConfig(config);input.value=config.steps[i];renderConnections();if(previous!==input.value)render();});
     row.querySelector('.step-icon-button').addEventListener('click',()=>openIconPicker(i));
-    row.querySelector('.remove-step').addEventListener('click',()=>{config.steps.splice(i,1);config.icons.splice(i,1);config.connections=config.connections.filter(e=>e.from!==i&&e.to!==i).map(e=>({...e,from:e.from>i?e.from-1:e.from,to:e.to>i?e.to-1:e.to}));renderSteps();renderConnections();render();});
-    const reorder=(direction)=>{for(const values of [config.steps,config.icons])[values[i],values[i+direction]]=[values[i+direction],values[i]];const remap=value=>value===i?i+direction:value===i+direction?i:value;config.connections=config.connections.map(e=>({...e,from:remap(e.from),to:remap(e.to)}));renderSteps();renderConnections();render();$('steps').children[i+direction].querySelector('input').focus();};
+    row.querySelector('.remove-step').addEventListener('click',()=>{config.steps.splice(i,1);config.icons.splice(i,1);if(config.positions.length)config.positions.splice(i,1);config.connections=config.connections.filter(e=>e.from!==i&&e.to!==i).map(e=>({...e,from:e.from>i?e.from-1:e.from,to:e.to>i?e.to-1:e.to}));renderSteps();renderConnections();render();});
+    const reorder=(direction)=>{for(const values of [config.steps,config.icons,...(config.positions.length?[config.positions]:[])])[values[i],values[i+direction]]=[values[i+direction],values[i]];const remap=value=>value===i?i+direction:value===i+direction?i:value;config.connections=config.connections.map(e=>({...e,from:remap(e.from),to:remap(e.to)}));renderSteps();renderConnections();render();$('steps').children[i+direction].querySelector('input').focus();};
     row.querySelectorAll('.reorder-button')[0].addEventListener('click',()=>reorder(-1));
     row.querySelectorAll('.reorder-button')[1].addEventListener('click',()=>reorder(1));
     $('steps').append(row);
@@ -78,9 +101,9 @@ function syncControls(){
   for(const key of Object.keys(THEME_FIELDS)){$('color-'+key).value=config.customTheme[key];$('color-value-'+key).textContent=config.customTheme[key];}
   renderSteps();render();$('preview').scrollTop=0;$('preview').scrollLeft=0;
 }
-function choosePreset(preset){const p=PRESETS[preset];config=normalizeConfig({...config,preset,steps:p.steps.slice(),icons:p.icons.slice(),layout:p.layout||'horizontal',columns:p.columns||3,connectionMode:p.connections?'custom':'sequential',connections:p.connections||[]});syncControls();}
+function choosePreset(preset){const p=PRESETS[preset];config=normalizeConfig({...config,preset,steps:p.steps.slice(),icons:p.icons.slice(),layout:p.layout||'horizontal',columns:p.columns||3,connectionMode:p.connections?'custom':'sequential',connections:p.connections||[],positions:[],canvasSize:null});syncControls();}
 $('preset').addEventListener('change',e=>choosePreset(e.target.value));
-$('add-step').addEventListener('click',()=>{if(config.steps.length>=12)return;config.steps.push('Step '+(config.steps.length+1));config.icons.push('file');renderSteps();renderConnections();render();openIconPicker(config.steps.length-1);});
+$('add-step').addEventListener('click',()=>{if(config.steps.length>=12)return;config.steps.push('Step '+(config.steps.length+1));config.icons.push('file');if(config.positions.length){const p=config.positions.at(-1)||{x:100,y:100};config.positions.push({x:p.x,y:Math.min(2100,p.y+150)});config.canvasSize.height=Math.min(2200,Math.max(config.canvasSize.height,p.y+220));}renderSteps();renderConnections();render();openIconPicker(config.steps.length-1);});
 for(const [name,palette]of Object.entries(THEMES)){
   const button=document.createElement('button');button.className='theme-option';button.dataset.theme=name;button.setAttribute('aria-pressed','false');
   button.innerHTML=`<span class="theme-swatch" style="--swatch-bg:${palette.background};--swatch-border:${palette.border};--swatch-card:${palette.card};--swatch-line:${palette.line}"><i></i><i></i><i></i></span><span>${THEME_LABELS[name]}</span><span class="theme-check" aria-hidden="true">✓</span>`;
@@ -127,8 +150,8 @@ async function copy(text,message){
   else{$('manual-copy-value').value=text;$('manual-copy').showModal();$('manual-copy-value').focus();$('manual-copy-value').select();}
 }
 $('copy-markdown').addEventListener('click',()=>copy(markdown(),$('embed-mode').value==='local'?'Markdown copied. Add workflow.svg to your repo.':'Markdown copied. Paste it directly into your README.'));
-$('copy-code').addEventListener('click',()=>copy(activeTab==='markdown'?markdown():renderSvg(config),'Code copied to clipboard.'));
-$('download').addEventListener('click',()=>{const blob=new Blob([renderSvg(config)],{type:'image/svg+xml;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='workflow.svg';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('SVG downloaded. Your README is ready for some flow.');});
+$('copy-code').addEventListener('click',()=>copy(activeTab==='markdown'?markdown():currentSvg(),'Code copied to clipboard.'));
+$('download').addEventListener('click',()=>{const blob=new Blob([currentSvg()],{type:'image/svg+xml;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='workflow.svg';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('SVG downloaded. Your README is ready for some flow.');});
 $('share').addEventListener('click',()=>{const url=new URL(location.protocol==='file:'?EDITOR_URL:location.href);url.search=workflowParams(config);url.hash='';copy(url.href,'Editor link copied. All your settings included.');});
 for(const [name,preset]of Object.entries(PRESETS)){
   if(!$('preset').querySelector(`option[value="${name}"]`)){const option=document.createElement('option');option.value=name;option.textContent=preset.name;$('preset').append(option);}
@@ -137,11 +160,12 @@ for(const [name,preset]of Object.entries(PRESETS)){
   $('examples').append(button);
 }
 document.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click',()=>{choosePreset(b.dataset.preset);document.querySelector('.builder').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});toast(PRESETS[b.dataset.preset].name+' preset loaded.');}));
-const extraControls={'workflow-title':'title','workflow-subtitle':'subtitle',layout:'layout',columns:'columns','connection-mode':'connectionMode',routing:'routing','line-style':'lineStyle','line-width':'lineWidth',arrows:'arrows',font:'font',spacing:'spacing',radius:'radius','traveler-size':'travelerSize','show-numbers':'showNumbers',transparent:'transparent'};
+const extraControls={'workflow-title':'title','workflow-subtitle':'subtitle',layout:'layout',columns:'columns','connection-mode':'connectionMode',routing:'routing','line-style':'lineStyle','line-width':'lineWidth',arrows:'arrows',font:'font','google-font':'googleFont','font-weight':'fontWeight',spacing:'spacing',radius:'radius','traveler-size':'travelerSize','show-numbers':'showNumbers',transparent:'transparent'};
 for(const [id,key]of Object.entries(extraControls))$(id).addEventListener('input',()=>{
   const input=$(id);
   if(key==='connectionMode'&&input.value==='custom'&&config.connectionMode!=='custom'&&!config.connections.length)config.connections=config.steps.slice(1).map((_,i)=>({from:i,to:i+1,label:''}));
-  config[key]=input.type==='checkbox'?input.checked:['columns','lineWidth','spacing','radius','travelerSize'].includes(key)?Number(input.value):input.value;
+  config[key]=input.type==='checkbox'?input.checked:['columns','lineWidth','spacing','radius','travelerSize','fontWeight'].includes(key)?Number(input.value):input.value;
+  if(['layout','columns','spacing'].includes(key)){config.positions=[];config.canvasSize=null;}
   config=normalizeConfig(config);if(key==='connectionMode')renderConnections();render();
 });
 function renderConnections(){
@@ -165,4 +189,33 @@ $('add-connection').addEventListener('click',()=>{
   for(let from=0;from<config.steps.length;from++)for(let to=0;to<config.steps.length;to++)if(from!==to&&!config.connections.some(e=>e.from===from&&e.to===to)){config.connections.push({from,to,label:''});renderConnections();render();return;}
   toast('All steps are already connected.');
 });
+$('retry-font').addEventListener('click',()=>{fontCache.delete(fontKey());render();});
+function capturePositions(){
+  if(config.positions.length)return;
+  const svg=$('preview').querySelector('svg');
+  config.positions=[...svg.querySelectorAll('[data-step]')].map(card=>{const b=card.querySelector('.stage').getBBox();return{x:b.x+b.width/2,y:b.y+b.height/2};});
+  const box=svg.viewBox.baseVal;config.canvasSize={width:box.width,height:Math.max(420,box.height)};
+}
+function moveCard(index,x,y){
+  const header=workflowGeometry(config).header,p=config.positions[index];
+  config.positions[index]={x:Math.round(Math.max(70,Math.min(config.canvasSize.width-70,x))),y:Math.round(Math.max(header+60,Math.min(config.canvasSize.height-70,y)))};
+}
+$('preview').addEventListener('pointerdown',event=>{
+  const card=event.target.closest('[data-step]');if(!card||event.button!==0)return;
+  event.preventDefault();const svg=card.ownerSVGElement,b=card.querySelector('.stage').getBBox(),point=new DOMPoint(event.clientX,event.clientY).matrixTransform(svg.getScreenCTM().inverse());
+  capturePositions();drag={index:Number(card.dataset.step),pointer:event.pointerId,dx:point.x-(b.x+b.width/2),dy:point.y-(b.y+b.height/2)};
+  $('preview').setPointerCapture(event.pointerId);$('preview').classList.add('dragging');render();
+});
+$('preview').addEventListener('pointermove',event=>{
+  if(!drag||event.pointerId!==drag.pointer)return;
+  const point=new DOMPoint(event.clientX,event.clientY).matrixTransform($('preview').querySelector('svg').getScreenCTM().inverse());moveCard(drag.index,point.x-drag.dx,point.y-drag.dy);
+  if(!dragFrame)dragFrame=requestAnimationFrame(()=>{dragFrame=null;render();});
+});
+function finishDrag(event){if(!drag||event.pointerId!==drag.pointer)return;cancelAnimationFrame(dragFrame);dragFrame=null;drag=null;$('preview').classList.remove('dragging');render();}
+for(const name of ['pointerup','pointercancel','lostpointercapture'])$('preview').addEventListener(name,finishDrag);
+$('preview').addEventListener('keydown',event=>{
+  const card=event.target.closest('[data-step]');if(!card||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key))return;event.preventDefault();capturePositions();const index=Number(card.dataset.step),p=config.positions[index],amount=event.shiftKey?20:5;
+  moveCard(index,p.x+(event.key==='ArrowLeft'?-amount:event.key==='ArrowRight'?amount:0),p.y+(event.key==='ArrowUp'?-amount:event.key==='ArrowDown'?amount:0));render();$('preview').querySelector(`[data-step="${index}"]`).focus();
+});
+$('reset-positions').addEventListener('click',()=>{config.positions=[];config.canvasSize=null;render();toast('Cards returned to the selected layout.');});
 selectTab('markdown');syncControls();
