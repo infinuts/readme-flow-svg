@@ -17,7 +17,9 @@ Already using a readme-flow-svg image in your README? Add your repository to the
 3. Keep the JSON valid, including commas between entries. Don't add duplicate repositories.
 4. Open a pull request and include a link to the README containing your workflow. Submit a repository you own or maintain.
 
-No local setup is needed for a showcase submission. You can edit the file on GitHub; GitHub will guide you through creating a fork and pull request. After the pull request is merged, the website lists your repository on its next deployment.
+No local setup is needed for a showcase submission. You can edit the file on GitHub; GitHub will guide you through creating a fork and pull request. After the pull request is merged, the website lists your repository on its next deployment and a GitHub Action updates the repository list in this project's README. You only need to edit the JSON file.
+
+The README table is generated between the `community-showcase` markers. Don't edit it by hand. `npm run build` also updates it locally.
 
 The showcase starts with this project's own README. Entries should link to public repositories with a working readme-flow-svg image. Maintainers check the README before merging.
 

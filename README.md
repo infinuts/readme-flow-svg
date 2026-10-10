@@ -168,7 +168,17 @@ The HTTP handler lives in `server/handler.js`, with Vercel adapters in `api/`. `
 
 The [live gallery](https://readme-flow-svg.vercel.app/#gallery) shows six animated workflows: CI/CD, ETL, authentication, onboarding, file processing, and AI inference. Each **Use this** button loads the complete example into the editor, including its theme, icons, layout, and connections.
 
-Using a workflow in your README? Add your repository to [community/repos.json](./community/repos.json) and open a pull request with a link to the README. Accepted entries appear in the website's [community showcase](https://readme-flow-svg.vercel.app/#community). See [the contribution guide](./CONTRIBUTING.md#add-your-repository-to-the-showcase) for the format and steps. You can submit through GitHub without installing anything.
+## Repositories using readme-flow-svg
+
+Made a flow for your README? Add your repository to [community/repos.json](./community/repos.json) and open a pull request with a link to your README. Accepted entries appear here and in the website's [community showcase](https://readme-flow-svg.vercel.app/#community). See [the contribution guide](./CONTRIBUTING.md#add-your-repository-to-the-showcase) for the format and steps. You can submit through GitHub without installing anything.
+
+<!-- community-showcase:start -->
+
+| Repository | Workflow |
+| --- | --- |
+| [infinuts/readme-flow-svg](https://github.com/infinuts/readme-flow-svg#readme) | The workflow generator uses its own animated SVG in its README. |
+
+<!-- community-showcase:end -->
 
 ## Contribute
 

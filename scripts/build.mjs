@@ -4,6 +4,7 @@ import {renderSvg,THEMES} from '../src/svg.js';
 import {bundle} from './bundle.mjs';
 import {GALLERY} from '../src/gallery.js';
 import {COMMUNITY_REPOS} from '../src/community.js';
+import './sync-showcase.mjs';
 await mkdir('assets/gallery',{recursive:true});
 for(const example of GALLERY)await writeFile(`assets/gallery/${example.id}.svg`,renderSvg(example.config));
 console.log(`Generated ${GALLERY.length} gallery previews and validated ${COMMUNITY_REPOS.length} community repositories.`);
