@@ -1,4 +1,5 @@
 import {ICONS,PRESETS,STEP_ICONS,TRAVELERS,THEMES,THEME_LABELS,THEME_FIELDS,normalizeConfig,renderSvg} from './svg.js';
+import {workflowMarkdown} from './links.js';
 const $=id=>document.getElementById(id);
 const icon=name=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]||ICONS.file}</svg>`;
 document.querySelectorAll('[data-icon]').forEach(el=>el.innerHTML=icon(el.dataset.icon));
@@ -9,7 +10,8 @@ try {
   else {const saved=localStorage.getItem('readme-flow-config');if(saved) config=normalizeConfig(JSON.parse(saved));}
 } catch { toast('Could not load saved settings. Starting with a fresh workflow.'); }
 function toast(message){$('toast').textContent=message;$('toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('visible'),3500);}
-function markdown(){return `![${config.steps.join(' → ').replace(/[\[\]\\\n\r]/g,' ')}](./workflow.svg)`;}
+function markdown(){return workflowMarkdown(config,$('embed-mode').value==='local');}
+$('embed-mode').addEventListener('change',()=>{updateCode();$('embed-hint').innerHTML=$('embed-mode').value==='local'?'Add <code>workflow.svg</code> to your repo, then paste this line in your README.':'Paste this line in your README. The image is generated from your settings.';});
 function updateCode(){$('code').textContent=activeTab==='markdown'?markdown():renderSvg(config);$('code-content').setAttribute('aria-labelledby',activeTab==='markdown'?'markdown-tab':'svg-tab');}
 function render(){
   $('preview').innerHTML=renderSvg(config,paused);
@@ -118,7 +120,7 @@ async function copy(text,message){
   if(copied)toast(message);
   else{$('manual-copy-value').value=text;$('manual-copy').showModal();$('manual-copy-value').focus();$('manual-copy-value').select();}
 }
-$('copy-markdown').addEventListener('click',()=>copy(markdown(),'Markdown copied. Add workflow.svg to your repo.'));
+$('copy-markdown').addEventListener('click',()=>copy(markdown(),$('embed-mode').value==='local'?'Markdown copied. Add workflow.svg to your repo.':'Markdown copied. Paste it directly into your README.'));
 $('copy-code').addEventListener('click',()=>copy(activeTab==='markdown'?markdown():renderSvg(config),'Code copied to clipboard.'));
 $('download').addEventListener('click',()=>{const blob=new Blob([renderSvg(config)],{type:'image/svg+xml;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='workflow.svg';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('SVG downloaded. Your README is ready for some flow.');});
 $('share').addEventListener('click',()=>{const url=new URL(location.protocol==='file:'?'https://infinuts.github.io/readme-flow-svg/':location.href);url.search='';url.hash='';for(const [k,v]of Object.entries(config)){if(k==='customTheme'&&config.theme!=='custom')continue;url.searchParams.set(k,typeof v==='object'?JSON.stringify(v):v);}copy(url.href,'Editor link copied. All your settings included.');});

@@ -1,0 +1,13 @@
+import {build} from 'esbuild';
+import {mkdir,rm,copyFile,readFile} from 'node:fs/promises';
+import {resolve,dirname} from 'node:path';
+const dist=resolve('dist');if(dirname(dist)!==process.cwd())throw Error('API output must stay inside the repository.');
+await rm(dist,{recursive:true,force:true});await mkdir('dist/server',{recursive:true});await mkdir('dist/.openai',{recursive:true});
+await build({entryPoints:['worker/index.js'],outfile:'dist/server/index.js',bundle:true,format:'esm',platform:'browser',conditions:['workerd','browser'],target:'es2022',minify:true});
+await copyFile('.openai/hosting.json','dist/.openai/hosting.json');
+const source=await readFile('dist/server/index.js','utf8');
+const worker=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+if(typeof worker.default?.fetch!=='function')throw Error('Worker must export fetch.');
+const response=await worker.default.fetch(new Request('https://example.com/svg?steps=Upload;Validate;Download'));
+if(response.status!==200||!response.headers.get('Content-Type')?.includes('image/svg+xml'))throw Error('Built Worker failed SVG verification.');
+console.log('Built and verified the SVG/MCP Worker in dist/server/index.js.');
