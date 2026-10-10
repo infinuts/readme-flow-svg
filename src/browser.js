@@ -40,7 +40,10 @@ const PRESETS = {
   deploy: {name:'Deployment',description:'From your machine to the world.',steps:['Commit','Test','Build','Deploy'],icons:['code','test','build','deploy']},
   data: {name:'Data pipeline',description:'Turn raw data into something useful.',steps:['Collect','Validate','Transform','Store'],icons:['download','shield','process','database']},
   auth: {name:'Authentication',description:'Follow a secure sign-in.',steps:['Sign in','Verify','Authorize','Session'],icons:['key','check','shield','lock']},
-  ai: {name:'AI inference',description:'From a prompt to an answer.',steps:['Input','Tokenize','Infer','Output'],icons:['message','process','sparkles','response']}
+  ai: {name:'AI inference',description:'From a prompt to an answer.',steps:['Input','Tokenize','Infer','Output'],icons:['message','process','sparkles','response']},
+  release:{name:'Release pipeline',description:'Build, verify, and roll out a release.',steps:['Commit','Lint','Test','Build','Package','Stage','Approve','Deploy','Monitor'],icons:['code','check','test','build','file','database','shield','deploy','response'],layout:'snake',columns:3},
+  review:{name:'Review loop',description:'Review changes and send feedback.',steps:['Draft','Review','Revise','Approve','Publish','Measure'],icons:['file','shield','code','check','upload','response'],layout:'snake',columns:3,connections:[{from:0,to:1},{from:1,to:2,label:'Changes'},{from:2,to:1,label:'Retry'},{from:1,to:3,label:'Approved'},{from:3,to:4},{from:4,to:5}]},
+  parallel:{name:'Parallel checks',description:'Split the work, then merge the results.',steps:['Commit','Unit tests','Lint','Build','Deploy','Monitor'],icons:['code','test','check','build','deploy','response'],layout:'grid',columns:3,connections:[{from:0,to:1},{from:0,to:2},{from:1,to:3},{from:2,to:3},{from:3,to:4},{from:4,to:5}]}
 };
 const STEP_ICONS = {
   file:'File',upload:'Upload',shield:'Shield',check:'Check',compress:'Compress',
@@ -74,17 +77,29 @@ function normalizePalette(raw={}) {
 function escapeXml(value) {
   return String(value).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g,'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
 }
+const LAYOUTS={horizontal:'Horizontal',vertical:'Vertical',snake:'Snake / multiple rows',grid:'Grid'};
+const FONTS={sans:'Sans serif',mono:'Monospace',serif:'Serif'};
+const bounded=(value,min,max,fallback)=>Number.isFinite(Number(value))?Math.max(min,Math.min(max,Number(value))):fallback;
 function normalizeConfig(raw={}) {
   const preset=Object.hasOwn(PRESETS,raw.preset)?raw.preset:'files';
-  const steps=Array.isArray(raw.steps)?raw.steps.slice(0,6).map(s=>String(s).trim().slice(0,32)):PRESETS[preset].steps.slice();
+  const steps=Array.isArray(raw.steps)?raw.steps.slice(0,12).map(s=>String(s).trim().slice(0,32)):PRESETS[preset].steps.slice();
   while(steps.length<3) steps.push('Step '+(steps.length+1));
   const icons=steps.map((_,i)=>{
     const selected=Array.isArray(raw.icons)?raw.icons[i]:undefined;
     return Object.hasOwn(STEP_ICONS,selected)?selected:PRESETS[preset].icons[i]||'file';
   });
-  return {preset,steps:steps.map((s,i)=>s||'Step '+(i+1)),icons,theme:raw.theme==='custom'||Object.hasOwn(THEMES,raw.theme)?raw.theme:'light',customTheme:normalizePalette(raw.customTheme),traveler:Object.hasOwn(TRAVELERS,raw.traveler)?raw.traveler:'dot',duration:Math.max(2,Math.min(10,Number(raw.duration)||6))};
+  const edges=[],seen=new Set();
+  for(const edge of (Array.isArray(raw.connections)?raw.connections:PRESETS[preset].connections||[]).slice(0,24)) {
+    if(!edge||!Number.isInteger(edge.from)||!Number.isInteger(edge.to)||edge.from<0||edge.to<0||edge.from>=steps.length||edge.to>=steps.length||edge.from===edge.to)continue;
+    const key=edge.from+':'+edge.to;if(seen.has(key))continue;seen.add(key);
+    edges.push({from:edge.from,to:edge.to,label:String(edge.label||'').slice(0,24)});
+  }
+  return {preset,steps:steps.map((s,i)=>s||'Step '+(i+1)),icons,theme:raw.theme==='custom'||Object.hasOwn(THEMES,raw.theme)?raw.theme:'light',customTheme:normalizePalette(raw.customTheme),traveler:Object.hasOwn(TRAVELERS,raw.traveler)?raw.traveler:'dot',duration:Math.max(2,Math.min(30,Number(raw.duration)||6)),
+    title:String(raw.title||'').slice(0,80),subtitle:String(raw.subtitle||'').slice(0,140),layout:Object.hasOwn(LAYOUTS,raw.layout)?raw.layout:PRESETS[preset].layout||'horizontal',columns:Math.round(bounded(raw.columns??PRESETS[preset].columns??3,2,6,3)),
+    connectionMode:(raw.connectionMode??(PRESETS[preset].connections?'custom':'sequential'))==='custom'?'custom':'sequential',connections:edges,routing:['curved','elbow','straight'].includes(raw.routing)?raw.routing:'curved',lineStyle:['solid','dashed','dotted'].includes(raw.lineStyle)?raw.lineStyle:'solid',lineWidth:bounded(raw.lineWidth??1.5,1,4,1.5),arrows:raw.arrows!==false,
+    spacing:bounded(raw.spacing??54,32,120,54),radius:bounded(raw.radius??12,0,24,12),font:Object.hasOwn(FONTS,raw.font)?raw.font:'sans',showNumbers:raw.showNumbers!==false,transparent:raw.transparent===true,travelerSize:bounded(raw.travelerSize??1,.6,1.8,1)};
 }
-function renderSvg(raw={},paused=false) {
+function renderClassicSvg(raw={},paused=false) {
   const c=normalizeConfig(raw), t=c.theme==='custom'?c.customTheme:THEMES[c.theme], n=c.steps.length, gap=172, width=gap*(n-1)+164, x0=82, y=156;
   const font=c.theme==='terminal'?'monospace':'-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif';
   const motion=Array.from({length:n},(_,i)=>{
@@ -103,6 +118,94 @@ function renderSvg(raw={},paused=false) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="204" viewBox="0 0 ${width} 204" role="img" aria-labelledby="title desc"><title id="title">${escapeXml(c.steps.join(' → '))}</title><desc id="desc">An animated ${escapeXml(PRESETS[c.preset].name.toLowerCase())} workflow with ${n} steps.</desc><style>text{font-family:${font}}.animated{animation-duration:${c.duration}s;animation-timing-function:linear;animation-iteration-count:infinite;animation-play-state:${paused?'paused':'running'}}.traveler{animation-name:travel;animation-timing-function:cubic-bezier(.45,0,.2,1)}.dot-halo{animation-name:dotPulse;animation-duration:1.6s;animation-timing-function:ease-out}@keyframes travel{${motion}}@keyframes dotPulse{0%{r:7;opacity:.22}100%{r:13;opacity:0}}@media(prefers-reduced-motion:reduce){.animated{animation:none}}</style><rect width="${width}" height="204" rx="16" fill="${t.background}"/><path d="M${x0} ${y}H${x0+(n-1)*gap}" stroke="${t.line}" stroke-width="1.5"/>${connectors}${nodes}<g class="traveler animated" data-element="${c.traveler}">${traveler}</g></svg>`;
 }
 
+function workflowGeometry(raw={}) {
+  const c=normalizeConfig(raw),n=c.steps.length,cols=c.layout==='vertical'?1:c.layout==='horizontal'?n:Math.min(c.columns,n),rows=Math.ceil(n/cols);
+  const header=(c.title?38:0)+(c.subtitle?48:0),width=Math.max(c.title||c.subtitle?400:220,cols*118+(cols-1)*c.spacing+96),height=rows*96+(rows-1)*c.spacing+96+header;
+  const left=(width-(cols*118+(cols-1)*c.spacing))/2;
+  const nodes=c.steps.map((_,i)=>{const row=Math.floor(i/cols),col=c.layout==='snake'&&row%2?cols-1-i%cols:i%cols;return {x:left+59+col*(118+c.spacing),y:header+96+row*(96+c.spacing)};});
+  const edges=c.connectionMode==='custom'?c.connections:Array.from({length:n-1},(_,i)=>({from:i,to:i+1,label:''}));
+  return {width,height,header,nodes,edges};
+}
+function curveBetween(a,b,c,g) {
+  const horizontal=a.y===b.y,sign=horizontal?Math.sign(b.x-a.x):Math.sign(b.y-a.y);
+  const start=horizontal?{x:a.x+sign*60,y:a.y}:{x:a.x,y:a.y+sign*49};
+  const end=horizontal?{x:b.x-sign*60,y:b.y}:{x:b.x,y:b.y-sign*49};
+  if(g.edges.some(e=>g.nodes[e.from]===b&&g.nodes[e.to]===a)){if(horizontal){start.y-=sign*12;end.y-=sign*12;}else{start.x+=sign*12;end.x+=sign*12;}}
+  let points=[start,end];
+  if(c.routing!=='straight'){
+    const outerStart=horizontal?{x:start.x+sign*10,y:start.y}:{x:start.x,y:start.y+sign*10};
+    const outerEnd=horizontal?{x:end.x-sign*10,y:end.y}:{x:end.x,y:end.y-sign*10};
+    const xs=[...new Set([20,g.width-20,outerStart.x,outerEnd.x,...g.nodes.flatMap(p=>[p.x-70,p.x,p.x+70])])].sort((a,b)=>a-b);
+    const ys=[...new Set([g.header+18,g.height-18,outerStart.y,outerEnd.y,...g.nodes.flatMap(p=>[p.y-60,p.y,p.y+60])])].sort((a,b)=>a-b);
+    const clear=(p,q)=>!g.nodes.some(node=>Math.max(p.x,q.x)>node.x-65&&Math.min(p.x,q.x)<node.x+65&&Math.max(p.y,q.y)>node.y-54&&Math.min(p.y,q.y)<node.y+54);
+    const first=ys.indexOf(outerStart.y)*xs.length+xs.indexOf(outerStart.x),last=ys.indexOf(outerEnd.y)*xs.length+xs.indexOf(outerEnd.x);
+    const point=id=>({x:xs[id%xs.length],y:ys[Math.floor(id/xs.length)]});
+    const cost=new Map([[first,0]]),previous=new Map(),open=[first],closed=new Set();
+    while(open.length){
+      open.sort((a,b)=>{const pa=point(a),pb=point(b);return cost.get(a)+Math.abs(pa.x-outerEnd.x)+Math.abs(pa.y-outerEnd.y)-cost.get(b)-Math.abs(pb.x-outerEnd.x)-Math.abs(pb.y-outerEnd.y);});
+      const current=open.shift();if(current===last)break;if(closed.has(current))continue;closed.add(current);
+      const x=current%xs.length,y=Math.floor(current/xs.length),p=point(current);
+      for(const [nx,ny]of [[x-1,y],[x+1,y],[x,y-1],[x,y+1]]){
+        if(nx<0||ny<0||nx>=xs.length||ny>=ys.length)continue;
+        const next=ny*xs.length+nx,q=point(next);if(!clear(p,q))continue;
+        const candidate=cost.get(current)+Math.abs(q.x-p.x)+Math.abs(q.y-p.y);
+        if(candidate<(cost.get(next)??Infinity)){cost.set(next,candidate);previous.set(next,current);open.push(next);}
+      }
+    }
+    if(previous.has(last)||first===last){const route=[point(last)];let id=last;while(id!==first){id=previous.get(id);route.push(point(id));}points=[start,...route.reverse(),end];}
+  }
+  points=points.filter((p,i)=>i===0||p.x!==points[i-1].x||p.y!==points[i-1].y);
+  points=points.filter((p,i)=>!i||i===points.length-1||!((points[i-1].x===p.x&&p.x===points[i+1].x)||(points[i-1].y===p.y&&p.y===points[i+1].y)));
+  let path=`M${start.x} ${start.y}`,samples=[start];
+  const lerp=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t}),distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+  for(let i=1;i<points.length;i++){
+    const p=points[i];
+    if(c.routing==='curved'&&i<points.length-1){
+      const previous=points[i-1],next=points[i+1],r=Math.min(12,distance(previous,p)/2,distance(p,next)/2),entry=lerp(p,previous,r/distance(p,previous)),exit=lerp(p,next,r/distance(p,next));
+      path+=`L${entry.x} ${entry.y}Q${p.x} ${p.y} ${exit.x} ${exit.y}`;samples.push(entry);
+      for(let j=1;j<=8;j++){const t=j/8;samples.push(lerp(lerp(entry,p,t),lerp(p,exit,t),t));}
+    }else {path+=`L${p.x} ${p.y}`;samples.push(p);}
+  }
+  const lengths=[0];for(let i=1;i<samples.length;i++)lengths.push(lengths[i-1]+distance(samples[i-1],samples[i]));
+  const at=t=>{const d=t*lengths.at(-1);for(let i=1;i<samples.length;i++)if(d<=lengths[i])return lerp(samples[i-1],samples[i],(d-lengths[i-1])/(lengths[i]-lengths[i-1]||1));return end;};
+  const before=points.at(-2);
+  return {path,at,end,angle:Math.atan2(end.y-before.y,end.x-before.x)*180/Math.PI};
+}
+function renderWorkflowSvg(raw={},paused=false) {
+  const c=normalizeConfig(raw);
+  if(c.steps.length<=6&&!c.title&&!c.subtitle&&c.layout==='horizontal'&&c.connectionMode==='sequential'&&c.routing==='curved'&&c.lineStyle==='solid'&&c.lineWidth===1.5&&c.arrows&&c.spacing===54&&c.radius===12&&c.font==='sans'&&c.showNumbers&&!c.transparent&&c.travelerSize===1)return renderClassicSvg(c,paused);
+  const t=c.theme==='custom'?c.customTheme:THEMES[c.theme],g=workflowGeometry(c),m=g.edges.length;
+  const font=c.font==='mono'||(c.font==='sans'&&c.theme==='terminal')?'monospace':c.font==='serif'?'Georgia, serif':'-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif';
+  const fit=(text,width,size)=>text.length*size*.6>width?` textLength="${width}" lengthAdjust="spacingAndGlyphs"`:'';
+  const text=(value,x,y,size,weight=400)=>`<text x="${x}" y="${y}" fill="${t.text}" font-size="${size}" font-weight="${weight}"${fit(value,g.width-80,size)}>${escapeXml(value)}</text>`;
+  const heading=(c.title?text(c.title,40,43,22,600):'')+(c.subtitle?text(c.subtitle.slice(0,70),40,c.title?70:40,12)+(c.subtitle.length>70?text(c.subtitle.slice(70),40,c.title?88:58,12):''):'');
+  let styles='';
+  const nodes=g.nodes.map((p,i)=>{
+    const events=[];g.edges.forEach((e,k)=>{if(e.from===i)events.push([k/m*100,(k+.24)/m*100]);if(e.to===i)events.push([(k+.7)/m*100,(k+.99)/m*100]);});
+    const active=`fill:${t.tint};stroke:${t.accent}`,inactive=`fill:${t.card};stroke:${t.border}`;
+    const keys=new Map([[0,inactive],[100,inactive]]);for(const [start,end]of events){if(start>0)keys.set(Math.max(0,start-.01),inactive);keys.set(start,active);keys.set(end,active);keys.set(Math.min(100,end+.01),inactive);}
+    styles+=`@keyframes stage${i}{${[...keys].sort((a,b)=>a[0]-b[0]).map(([time,value])=>`${time.toFixed(3)}%{${value}}`).join('')}}`;
+    return `<g data-step="${i}"><rect class="stage animated" style="animation-name:stage${i}" x="${p.x-59}" y="${p.y-48}" width="118" height="96" rx="${c.radius}" fill="${t.card}" stroke="${t.border}"/>${c.showNumbers?`<text x="${p.x-45}" y="${p.y-29}" fill="${t.muted}" font-size="9">${String(i+1).padStart(2,'0')}</text>`:''}<g transform="translate(${p.x-12} ${p.y-26})" fill="none" stroke="${t.accent}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ICONS[c.icons[i]]}</g><text x="${p.x}" y="${p.y+25}" text-anchor="middle" fill="${t.text}" font-size="12" font-weight="500"${fit(c.steps[i],102,12)}>${escapeXml(c.steps[i])}</text></g>`;
+  }).join('');
+  const dash=c.lineStyle==='dashed'?' stroke-dasharray="7 5"':c.lineStyle==='dotted'?' stroke-dasharray="1 5"':'';
+  let travelers='';
+  const connectors=g.edges.map((edge,i)=>{
+    const curve=curveBetween(g.nodes[edge.from],g.nodes[edge.to],c,g),mid=curve.at(.5),start=i/m*100,end=(i+.95)/m*100;
+    const samples=Array.from({length:33},(_,j)=>{const p=curve.at(j/32);return `${(start+(end-start)*j/32).toFixed(4)}%{transform:translate(${p.x.toFixed(2)}px,${p.y.toFixed(2)}px);opacity:${j===0||j===32?0:1}}`;}).join('');
+    styles+=`@keyframes travel${i}{0%,100%{opacity:0}${samples}}`;
+    const element=c.traveler==='dot'?`<circle class="dot-halo animated" r="9" fill="${t.accent}" opacity=".13"/><circle r="4.5" fill="${t.accent}"/>`:`<rect x="-14" y="-14" width="28" height="28" rx="7" fill="${t.tint}"/><g transform="translate(-9 -9) scale(.75)" fill="none" stroke="${t.accent}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICONS[TRAVELERS[c.traveler].icon]}</g>`;
+    travelers+=`<g class="traveler animated" data-element="${c.traveler}" style="animation-name:travel${i};opacity:0"><g transform="scale(${c.travelerSize})">${element}</g></g>`;
+    return `<g data-connection="${edge.from}-${edge.to}"><path d="${curve.path}" fill="none" stroke="${t.line}" stroke-width="${c.lineWidth}" stroke-linecap="round"${dash}/>${c.arrows?`<path d="M-7-4 0 0-7 4" transform="translate(${curve.end.x} ${curve.end.y}) rotate(${curve.angle})" fill="none" stroke="${t.line}" stroke-width="${c.lineWidth}" stroke-linecap="round" stroke-linejoin="round"/>`:''}${edge.label?`<text x="${mid.x}" y="${mid.y-9}" text-anchor="middle" fill="${t.muted}" stroke="${c.transparent?t.card:t.background}" stroke-width="4" paint-order="stroke" font-size="10">${escapeXml(edge.label)}</text>`:''}</g>`;
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${g.width}" height="${g.height}" viewBox="0 0 ${g.width} ${g.height}" role="img" aria-labelledby="title desc"><title id="title">${escapeXml(c.title||c.steps.join(' → '))}</title><desc id="desc">${escapeXml(c.subtitle||'Animated workflow: '+c.steps.join(', '))}. ${g.edges.map(e=>escapeXml(c.steps[e.from]+' to '+c.steps[e.to]+(e.label?' ('+e.label+')':''))).join('; ')}.</desc><style>text{font-family:${font}}.animated{animation-duration:${c.duration}s;animation-timing-function:linear;animation-iteration-count:infinite;animation-play-state:${paused?'paused':'running'}}.dot-halo{animation-name:dotPulse;animation-duration:1.6s}@keyframes dotPulse{0%{r:7;opacity:.22}100%{r:13;opacity:0}}${styles}@media(prefers-reduced-motion:reduce){.animated{animation:none}.traveler{display:none}}</style>${c.transparent?'':`<rect width="${g.width}" height="${g.height}" rx="16" fill="${t.background}"/>`}${heading}${connectors}${nodes}${travelers}</svg>`;
+}
+function renderSvg(raw={},paused=false) {
+  const c=normalizeConfig(raw);let hash=2166136261;
+  for(const char of JSON.stringify(c))hash=Math.imul(hash^char.charCodeAt(0),16777619)>>>0;
+  const suffix='_'+hash.toString(36),names=/\b(stage\d+|travel\d*|dotPulse)\b/g;
+  return renderWorkflowSvg(c,paused).replace(/<style>([\s\S]*?)<\/style>/g,(_,css)=>'<style>'+css.replace(names,name=>name+suffix)+'</style>').replace(/style="animation-name:(stage\d+|travel\d*)/g,(_,name)=>'style="animation-name:'+name+suffix);
+}
+
 
 const SERVICE_URL='https://readme-flow-svg.vercel.app';
 const EDITOR_URL=SERVICE_URL+'/';
@@ -117,12 +220,15 @@ function workflowParams(raw) {
   if(config.duration!==6)params.set('duration',String(config.duration));
   if(config.icons.some((name,i)=>name!==(PRESETS[config.preset].icons[i]||'file')))params.set('icons',JSON.stringify(config.icons));
   if(config.theme==='custom')params.set('customTheme',JSON.stringify(config.customTheme));
+  const defaults=normalizeConfig({preset:config.preset});
+  for(const key of ['title','subtitle','layout','columns','connectionMode','routing','lineStyle','lineWidth','arrows','spacing','radius','font','showNumbers','transparent','travelerSize'])if(config[key]!==defaults[key])params.set(key,String(config[key]));
+  if(config.connectionMode==='custom'||JSON.stringify(config.connections)!==JSON.stringify(defaults.connections))params.set('connections',JSON.stringify(config.connections));
   return params;
 }
 function imageUrl(raw) {return SERVICE_URL+'/svg?'+workflowParams(raw);}
 function editorUrl(raw) {return EDITOR_URL+'?'+workflowParams(raw);}
 function workflowMarkdown(raw,local=false) {
-  const config=normalizeConfig(raw),alt=config.steps.join(' → ').replace(/[\[\]\\\n\r]/g,' ');
+  const config=normalizeConfig(raw),alt=(config.title||config.steps.join(' → ')).replace(/[\[\]\\\n\r]/g,' ');
   return local?`![${alt}](./workflow.svg)`:`[![${alt}](${imageUrl(config)})](${SERVICE_URL}/r)`;
 }
 function parseWorkflowParams(params) {
@@ -132,7 +238,12 @@ function parseWorkflowParams(params) {
     if(!Array.isArray(parsed)||!parsed.every(item=>typeof item==='string'))throw Error(`${key} must be an array of strings or semicolon-separated text.`);
     return parsed;
   };
-  return {steps:array('steps'),icons:array('icons'),preset:params.get('preset')||undefined,theme:params.get('theme')||undefined,traveler:params.get('traveler')||undefined,duration:params.has('duration')?Number(params.get('duration')):undefined,customTheme:params.has('customTheme')?JSON.parse(params.get('customTheme')):undefined};
+  const extra={};
+  for(const key of ['title','subtitle','layout','connectionMode','routing','lineStyle','font'])if(params.has(key))extra[key]=params.get(key);
+  for(const key of ['columns','lineWidth','spacing','radius','travelerSize'])if(params.has(key))extra[key]=Number(params.get(key));
+  for(const key of ['arrows','showNumbers','transparent'])if(params.has(key)){if(!['true','false'].includes(params.get(key)))throw Error('Invalid boolean');extra[key]=params.get(key)==='true';}
+  if(params.has('connections'))extra.connections=JSON.parse(params.get('connections'));
+  return {...extra,steps:array('steps'),icons:array('icons'),preset:params.get('preset')||undefined,theme:params.get('theme')||undefined,traveler:params.get('traveler')||undefined,duration:params.has('duration')?Number(params.get('duration')):undefined,customTheme:params.has('customTheme')?JSON.parse(params.get('customTheme')):undefined};
 }
 
 const $=id=>document.getElementById(id);
@@ -141,7 +252,7 @@ document.querySelectorAll('[data-icon]').forEach(el=>el.innerHTML=icon(el.datase
 let config=normalizeConfig(), paused=false, activeTab='markdown',toastTimer,iconStep=null;
 try {
   const query=new URLSearchParams(location.search);
-  if(query.has('steps')) config=normalizeConfig({steps:JSON.parse(query.get('steps')),icons:query.has('icons')?JSON.parse(query.get('icons')):undefined,theme:query.get('theme'),customTheme:query.has('customTheme')?JSON.parse(query.get('customTheme')):undefined,traveler:query.get('traveler'),duration:query.get('duration'),preset:query.get('preset')});
+  if(query.size) config=normalizeConfig(parseWorkflowParams(query));
   else {const saved=localStorage.getItem('readme-flow-config');if(saved) config=normalizeConfig(JSON.parse(saved));}
 } catch { toast('Could not load saved settings. Starting with a fresh workflow.'); }
 function toast(message){$('toast').textContent=message;$('toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('visible'),3500);}
@@ -150,16 +261,20 @@ $('embed-mode').addEventListener('change',()=>{updateCode();$('embed-hint').inne
 function updateCode(){$('code').textContent=activeTab==='markdown'?markdown():renderSvg(config);$('code-content').setAttribute('aria-labelledby',activeTab==='markdown'?'markdown-tab':'svg-tab');}
 function render(){
   $('preview').innerHTML=renderSvg(config,paused);
+  $('preview').style.setProperty('--svg-width',$('preview').querySelector('svg').getAttribute('width')+'px');
   const palette=config.theme==='custom'?config.customTheme:THEMES[config.theme],canvas=$('preview-canvas');
   canvas.className='preview-canvas';
   canvas.style.backgroundColor=palette.background;
   canvas.style.backgroundImage=`radial-gradient(${palette.line} .8px,transparent .8px)`;
   canvas.style.setProperty('--canvas-meta',palette.muted);
   $('custom-theme-preview').innerHTML=renderSvg({...config,theme:'custom'},paused);
-  $('workflow-name').textContent=PRESETS[config.preset].name+' workflow';
+  $('workflow-name').textContent=config.title||PRESETS[config.preset].name+' workflow';
   $('preview-meta').textContent=`${config.steps.length} steps · ${config.duration}s loop`;
-  $('step-count').textContent=`${config.steps.length} / 6`;
-  $('add-step').disabled=config.steps.length>=6;
+  $('step-count').textContent=`${config.steps.length} / 12`;
+  $('add-step').disabled=config.steps.length>=12;
+  $('columns').disabled=!['snake','grid'].includes(config.layout);
+  $('preview-canvas').classList.toggle('multi-row',config.layout!=='horizontal');
+  $('preview-canvas').classList.toggle('vertical-layout',config.layout==='vertical');
   $('speed-value').textContent=config.duration+'s';
   updateCode();
   try{localStorage.setItem('readme-flow-config',JSON.stringify(config));}catch{/* Storage can be disabled; exports still work. */}
@@ -171,10 +286,10 @@ function renderSteps(){
     row.innerHTML=`<div class="step-controls"><button class="reorder-button" aria-label="Move step ${i+1} up" title="Move up" ${i===0?'disabled':''}>⌃</button><button class="reorder-button" aria-label="Move step ${i+1} down" title="Move down" ${i===config.steps.length-1?'disabled':''}>⌄</button></div><div class="step-input"><button class="step-icon-button" aria-label="Choose icon for step ${i+1}" title="Choose icon: ${STEP_ICONS[config.icons[i]]}" aria-haspopup="dialog" aria-controls="icon-picker">${icon(config.icons[i])}</button><input maxlength="32" aria-label="Step ${i+1} label" placeholder="Step ${i+1}"><button class="icon-button remove-step" aria-label="Remove step ${i+1}" title="Remove step" ${config.steps.length<=3?'disabled':''}>${icon('close')}</button></div>`;
     const input=row.querySelector('input');input.value=label;
     input.addEventListener('input',()=>{config.steps[i]=input.value;render();});
-    input.addEventListener('blur',()=>{config=normalizeConfig(config);input.value=config.steps[i];render();});
+    input.addEventListener('blur',()=>{config=normalizeConfig(config);input.value=config.steps[i];renderConnections();render();});
     row.querySelector('.step-icon-button').addEventListener('click',()=>openIconPicker(i));
-    row.querySelector('.remove-step').addEventListener('click',()=>{config.steps.splice(i,1);config.icons.splice(i,1);renderSteps();render();});
-    const reorder=(direction)=>{for(const values of [config.steps,config.icons])[values[i],values[i+direction]]=[values[i+direction],values[i]];renderSteps();render();$('steps').children[i+direction].querySelector('input').focus();};
+    row.querySelector('.remove-step').addEventListener('click',()=>{config.steps.splice(i,1);config.icons.splice(i,1);config.connections=config.connections.filter(e=>e.from!==i&&e.to!==i).map(e=>({...e,from:e.from>i?e.from-1:e.from,to:e.to>i?e.to-1:e.to}));renderSteps();renderConnections();render();});
+    const reorder=(direction)=>{for(const values of [config.steps,config.icons])[values[i],values[i+direction]]=[values[i+direction],values[i]];const remap=value=>value===i?i+direction:value===i+direction?i:value;config.connections=config.connections.map(e=>({...e,from:remap(e.from),to:remap(e.to)}));renderSteps();renderConnections();render();$('steps').children[i+direction].querySelector('input').focus();};
     row.querySelectorAll('.reorder-button')[0].addEventListener('click',()=>reorder(-1));
     row.querySelectorAll('.reorder-button')[1].addEventListener('click',()=>reorder(1));
     $('steps').append(row);
@@ -198,6 +313,8 @@ $('close-icon-picker').addEventListener('click',()=>$('icon-picker').close());
 $('icon-picker').addEventListener('close',()=>{if(iconStep!==null)$('steps').children[iconStep]?.querySelector('.step-icon-button').focus();iconStep=null;});
 function syncControls(){
   $('preset').value=config.preset;$('speed').value=config.duration;
+  for(const [id,key]of Object.entries(extraControls))$(id).type==='checkbox'?$(id).checked=config[key]:$(id).value=config[key];
+  renderConnections();
   document.querySelectorAll('[data-theme]').forEach(b=>{const selected=b.dataset.theme===config.theme;b.classList.toggle('selected',selected);b.setAttribute('aria-pressed',selected);});
   $('traveler-icon').className=config.traveler==='dot'?'dot-icon':'';
   $('traveler-icon').innerHTML=TRAVELERS[config.traveler].icon?icon(TRAVELERS[config.traveler].icon):'';
@@ -205,11 +322,11 @@ function syncControls(){
   $('traveler-button').title='Moving element: '+TRAVELERS[config.traveler].name;
   $('preset-icon').innerHTML=icon(PRESETS[config.preset].icons[0]);
   for(const key of Object.keys(THEME_FIELDS)){$('color-'+key).value=config.customTheme[key];$('color-value-'+key).textContent=config.customTheme[key];}
-  renderSteps();render();
+  renderSteps();render();$('preview').scrollTop=0;$('preview').scrollLeft=0;
 }
-function choosePreset(preset){config=normalizeConfig({...config,preset,steps:PRESETS[preset].steps.slice(),icons:PRESETS[preset].icons.slice()});syncControls();}
+function choosePreset(preset){const p=PRESETS[preset];config=normalizeConfig({...config,preset,steps:p.steps.slice(),icons:p.icons.slice(),layout:p.layout||'horizontal',columns:p.columns||3,connectionMode:p.connections?'custom':'sequential',connections:p.connections||[]});syncControls();}
 $('preset').addEventListener('change',e=>choosePreset(e.target.value));
-$('add-step').addEventListener('click',()=>{if(config.steps.length>=6)return;config.steps.push('Step '+(config.steps.length+1));config.icons.push('file');renderSteps();render();openIconPicker(config.steps.length-1);});
+$('add-step').addEventListener('click',()=>{if(config.steps.length>=12)return;config.steps.push('Step '+(config.steps.length+1));config.icons.push('file');renderSteps();renderConnections();render();openIconPicker(config.steps.length-1);});
 for(const [name,palette]of Object.entries(THEMES)){
   const button=document.createElement('button');button.className='theme-option';button.dataset.theme=name;button.setAttribute('aria-pressed','false');
   button.innerHTML=`<span class="theme-swatch" style="--swatch-bg:${palette.background};--swatch-border:${palette.border};--swatch-card:${palette.card};--swatch-line:${palette.line}"><i></i><i></i><i></i></span><span>${THEME_LABELS[name]}</span><span class="theme-check" aria-hidden="true">✓</span>`;
@@ -258,7 +375,7 @@ async function copy(text,message){
 $('copy-markdown').addEventListener('click',()=>copy(markdown(),$('embed-mode').value==='local'?'Markdown copied. Add workflow.svg to your repo.':'Markdown copied. Paste it directly into your README.'));
 $('copy-code').addEventListener('click',()=>copy(activeTab==='markdown'?markdown():renderSvg(config),'Code copied to clipboard.'));
 $('download').addEventListener('click',()=>{const blob=new Blob([renderSvg(config)],{type:'image/svg+xml;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='workflow.svg';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('SVG downloaded. Your README is ready for some flow.');});
-$('share').addEventListener('click',()=>{const url=new URL(location.protocol==='file:'?EDITOR_URL:location.href);url.search='';url.hash='';for(const [k,v]of Object.entries(config)){if(k==='customTheme'&&config.theme!=='custom')continue;url.searchParams.set(k,typeof v==='object'?JSON.stringify(v):v);}copy(url.href,'Editor link copied. All your settings included.');});
+$('share').addEventListener('click',()=>{const url=new URL(location.protocol==='file:'?EDITOR_URL:location.href);url.search=workflowParams(config);url.hash='';copy(url.href,'Editor link copied. All your settings included.');});
 for(const [name,preset]of Object.entries(PRESETS)){
   if(!$('preset').querySelector(`option[value="${name}"]`)){const option=document.createElement('option');option.value=name;option.textContent=preset.name;$('preset').append(option);}
   const button=document.createElement('button');button.className='example';button.dataset.preset=name;
@@ -266,6 +383,34 @@ for(const [name,preset]of Object.entries(PRESETS)){
   $('examples').append(button);
 }
 document.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click',()=>{choosePreset(b.dataset.preset);document.querySelector('.builder').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});toast(PRESETS[b.dataset.preset].name+' preset loaded.');}));
+const extraControls={'workflow-title':'title','workflow-subtitle':'subtitle',layout:'layout',columns:'columns','connection-mode':'connectionMode',routing:'routing','line-style':'lineStyle','line-width':'lineWidth',arrows:'arrows',font:'font',spacing:'spacing',radius:'radius','traveler-size':'travelerSize','show-numbers':'showNumbers',transparent:'transparent'};
+for(const [id,key]of Object.entries(extraControls))$(id).addEventListener('input',()=>{
+  const input=$(id);
+  if(key==='connectionMode'&&input.value==='custom'&&config.connectionMode!=='custom'&&!config.connections.length)config.connections=config.steps.slice(1).map((_,i)=>({from:i,to:i+1,label:''}));
+  config[key]=input.type==='checkbox'?input.checked:['columns','lineWidth','spacing','radius','travelerSize'].includes(key)?Number(input.value):input.value;
+  config=normalizeConfig(config);if(key==='connectionMode')renderConnections();render();
+});
+function renderConnections(){
+  $('connection-editor').hidden=config.connectionMode!=='custom';$('connections').replaceChildren();
+  config.connections.forEach((edge,index)=>{
+    const row=document.createElement('div');row.className='connection-row';
+    for(const key of ['from','to']){
+      const select=document.createElement('select');select.setAttribute('aria-label',`Connection ${index+1} ${key}`);
+      config.steps.forEach((label,i)=>{const option=document.createElement('option');option.value=i;option.textContent=`${i+1}. ${label}`;option.selected=edge[key]===i;option.disabled=key==='from'?i===edge.to:i===edge.from;select.append(option);});
+      select.addEventListener('change',()=>{const next={...edge,[key]:Number(select.value)};if(config.connections.some((e,j)=>j!==index&&e.from===next.from&&e.to===next.to)){toast('That connection already exists.');renderConnections();return;}config.connections[index]=next;renderConnections();render();});row.append(select);
+    }
+    const label=document.createElement('input');label.maxLength=24;label.placeholder='Line label (optional)';label.value=edge.label;label.setAttribute('aria-label',`Connection ${index+1} label`);label.addEventListener('input',()=>{config.connections[index].label=label.value;render();});row.append(label);
+    const actions=document.createElement('div');actions.className='connection-actions';
+    for(const direction of [-1,1]){const move=document.createElement('button');move.className='icon-button';move.textContent=direction<0?'↑':'↓';move.setAttribute('aria-label',`Move connection ${index+1} ${direction<0?'up':'down'}`);move.disabled=index+direction<0||index+direction>=config.connections.length;move.addEventListener('click',()=>{[config.connections[index],config.connections[index+direction]]=[config.connections[index+direction],config.connections[index]];renderConnections();render();});actions.append(move);}
+    const remove=document.createElement('button');remove.className='icon-button';remove.setAttribute('aria-label',`Remove connection ${index+1}`);remove.innerHTML=icon('close');remove.addEventListener('click',()=>{config.connections.splice(index,1);renderConnections();render();});actions.append(remove);row.append(actions);$('connections').append(row);
+  });
+  $('add-connection').disabled=config.connections.length>=24;
+}
+$('add-connection').addEventListener('click',()=>{
+  if(config.connections.length>=24)return;
+  for(let from=0;from<config.steps.length;from++)for(let to=0;to<config.steps.length;to++)if(from!==to&&!config.connections.some(e=>e.from===from&&e.to===to)){config.connections.push({from,to,label:''});renderConnections();render();return;}
+  toast('All steps are already connected.');
+});
 selectTab('markdown');syncControls();
 
 })();

@@ -6,7 +6,7 @@ Create an animated workflow for your GitHub README.
 
 [![Upload → Validate → Compress → Download](https://readme-flow-svg.vercel.app/svg?steps=Upload;Validate;Compress;Download&theme=github&traveler=file)](https://readme-flow-svg.vercel.app/r)
 
-Enter three to six steps and watch a dot, file, or another icon move through them. The preview updates as you edit. You can change the labels and stage icons, reorder steps, and adjust the loop duration.
+Enter three to twelve steps and watch a dot, file, or another icon move through them. Add a title and subtitle, arrange the cards in rows or columns, and connect them to show branches, merges, and review loops. The preview updates as you edit.
 
 Choose Light, Dark, Terminal, GitHub, Ocean, or Sunset, or make a custom theme with your own colors. The moving element picker includes a rocket, package, code, spark, heart, and lightning bolt. The dot has a subtle pulse, and movement eases between stages.
 
@@ -14,7 +14,7 @@ The generator runs in your browser. You don't need an account or your own deploy
 
 ## Add a workflow to your README
 
-1. Open the generator and choose a preset: File processing, API request, Deployment, Data pipeline, Authentication, or AI inference.
+1. Open the generator and choose a preset: File processing, API request, Deployment, Data pipeline, Authentication, AI inference, Release pipeline, Review loop, or Parallel checks.
 2. Edit the steps and choose how the animation looks.
 3. Click Copy Markdown and paste the result into your README. The image URL generates your SVG directly, so you don't need to upload a file.
 
@@ -23,6 +23,18 @@ For a file that lives in your own repo, choose “File in your repo”, download
 Adding a step opens an icon picker. Click the icon beside any existing step to change it. Each icon stays with its step when you reorder the workflow.
 
 Choose Custom in the theme picker to edit the background, cards, labels, accent, borders, active stages, step numbers, and connections. Your palette and moving element are included in downloaded SVGs and shared editor links.
+
+## Build a larger workflow
+
+Use **Title & layout** to add a heading and subtitle. Horizontal and vertical layouts keep a single sequence. Snake wraps the sequence back and forth across rows; Grid fills each row from left to right. Choose two to six steps per row.
+
+Under **Connections & branches**, switch to Custom connections and choose the start and end of each line. Add labels such as “Success”, “Retry”, or “Needs review”. Connections use zero-based step indices in the API, while the editor shows step names and numbers. Reordering a step preserves its connections; removing it removes its attached lines. You can leave steps disconnected.
+
+Rounded paths and square elbows route around cards. Direct lines join endpoints without avoiding cards. Choose solid, dashed, or dotted lines, change their width, and toggle arrowheads. Use the up/down buttons to change connection order. Connections animate in list order, so the diagram illustrates a workflow rather than simulating task execution.
+
+Under **Appearance & spacing**, change the font, space between cards, corner radius, and moving element size. Hide step numbers or export with a transparent background. Loops can run for 2–30 seconds.
+
+![A release pipeline arranged across three rows](./examples/release.svg)
 
 The SVG contains its own animation and icons. It doesn't need scripts, remote fonts, or an image service.
 
@@ -36,7 +48,21 @@ Vercel hosts the editor and image API. The editor is also available on GitHub Pa
 [![Workflow](https://readme-flow-svg.vercel.app/svg?steps=Upload;Validate;Compress;Download&theme=github&traveler=file)](https://readme-flow-svg.vercel.app/r)
 ```
 
-`steps` accepts semicolon-separated labels or a JSON array. The other options are `preset`, `theme`, `traveler`, `duration` (2 to 10 seconds), `icons` (a JSON array), and `customTheme` (a JSON object of hex colors). The generator encodes these for you, including labels containing semicolons.
+`steps` accepts semicolon-separated labels or a JSON array. The generator encodes all options for you, including labels containing semicolons.
+
+| Options | Values |
+| --- | --- |
+| `title`, `subtitle` | Up to 80 and 140 characters |
+| `layout`, `columns` | `horizontal`, `vertical`, `snake`, or `grid`; 2–6 columns |
+| `connectionMode`, `connections` | `sequential` or `custom`; up to 24 `{from, to, label}` objects |
+| `routing`, `lineStyle` | `curved`, `elbow`, or `straight`; `solid`, `dashed`, or `dotted` |
+| `lineWidth`, `arrows` | 1–4; `true` or `false` |
+| `spacing`, `radius` | 32–120 pixels; 0–24 pixels |
+| `font`, `showNumbers`, `transparent` | `sans`, `mono`, or `serif`; boolean flags |
+| `duration`, `travelerSize` | 2–30 seconds; 0.6–1.8 scale |
+| `preset`, `theme`, `traveler`, `icons`, `customTheme` | Supported names from `/options`, an icon array, and a palette object |
+
+For example: `/svg?preset=release&title=Release%20pipeline&layout=snake&columns=3&theme=github`. Existing links keep their original straight-line appearance when no new options are set.
 
 The `/r` route redirects to this repository. Git.io stopped accepting new short links in 2022, so a new git.io alias isn't available. [GitHub's announcement](https://github.blog/changelog/2022-01-11-git-io-no-longer-accepts-new-urls/).
 

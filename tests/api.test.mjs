@@ -55,7 +55,7 @@ test('official MCP client connects over stdio and rejects invalid input',async()
   const client=new Client({name:'readme-flow-svg-test',version:'1.0.0'}),transport=new StdioClientTransport({command:process.execPath,args:[resolve('mcp/stdio.mjs')]});
   try{
     await client.connect(transport);const tools=await client.listTools();assert.equal(tools.tools.length,2);
-    const options=await client.callTool({name:'list_options',arguments:{}});assert.equal(Object.keys(options.structuredContent.presets).length,6);
+    const options=await client.callTool({name:'list_options',arguments:{}});assert.equal(Object.keys(options.structuredContent.presets).length,9);
     const result=await client.callTool({name:'generate_workflow',arguments:{steps:['Upload','Validate','Download'],theme:'github'}});assert.ok(result.structuredContent.svg.startsWith('<svg'));assert.ok(result.structuredContent.markdown.includes('/svg?'));
     const invalid=await client.callTool({name:'generate_workflow',arguments:{steps:['Only one']}});assert.equal(invalid.isError,true);
   }finally{await client.close();}

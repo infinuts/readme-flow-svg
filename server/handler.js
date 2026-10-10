@@ -29,7 +29,7 @@ const handler={
         const headers={...cors,'Content-Type':'image/svg+xml; charset=utf-8','Cache-Control':'public, max-age=3600, s-maxage=86400',ETag:etag,'Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'"};
         if(request.headers.get('If-None-Match')===etag)return new Response(null,{status:304,headers});
         return new Response(request.method==='HEAD'?null:output.svg,{headers});
-      }catch{return json({error:'Invalid workflow settings. Use 3–6 nonempty steps, supported options, and valid hex colors.'},400);}
+      }catch{return json({error:'Invalid workflow settings. Use 3–12 nonempty steps, valid connections, supported options, and valid hex colors.'},400);}
     }
     if(url.pathname==='/generate'&&request.method==='POST'){
       const body=await request.text();if(new TextEncoder().encode(body).length>16384)return json({error:'Request is too large.'},413);

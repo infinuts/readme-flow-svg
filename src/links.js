@@ -13,12 +13,15 @@ export function workflowParams(raw) {
   if(config.duration!==6)params.set('duration',String(config.duration));
   if(config.icons.some((name,i)=>name!==(PRESETS[config.preset].icons[i]||'file')))params.set('icons',JSON.stringify(config.icons));
   if(config.theme==='custom')params.set('customTheme',JSON.stringify(config.customTheme));
+  const defaults=normalizeConfig({preset:config.preset});
+  for(const key of ['title','subtitle','layout','columns','connectionMode','routing','lineStyle','lineWidth','arrows','spacing','radius','font','showNumbers','transparent','travelerSize'])if(config[key]!==defaults[key])params.set(key,String(config[key]));
+  if(config.connectionMode==='custom'||JSON.stringify(config.connections)!==JSON.stringify(defaults.connections))params.set('connections',JSON.stringify(config.connections));
   return params;
 }
 export function imageUrl(raw) {return SERVICE_URL+'/svg?'+workflowParams(raw);}
 export function editorUrl(raw) {return EDITOR_URL+'?'+workflowParams(raw);}
 export function workflowMarkdown(raw,local=false) {
-  const config=normalizeConfig(raw),alt=config.steps.join(' → ').replace(/[\[\]\\\n\r]/g,' ');
+  const config=normalizeConfig(raw),alt=(config.title||config.steps.join(' → ')).replace(/[\[\]\\\n\r]/g,' ');
   return local?`![${alt}](./workflow.svg)`:`[![${alt}](${imageUrl(config)})](${SERVICE_URL}/r)`;
 }
 export function parseWorkflowParams(params) {
@@ -28,5 +31,10 @@ export function parseWorkflowParams(params) {
     if(!Array.isArray(parsed)||!parsed.every(item=>typeof item==='string'))throw Error(`${key} must be an array of strings or semicolon-separated text.`);
     return parsed;
   };
-  return {steps:array('steps'),icons:array('icons'),preset:params.get('preset')||undefined,theme:params.get('theme')||undefined,traveler:params.get('traveler')||undefined,duration:params.has('duration')?Number(params.get('duration')):undefined,customTheme:params.has('customTheme')?JSON.parse(params.get('customTheme')):undefined};
+  const extra={};
+  for(const key of ['title','subtitle','layout','connectionMode','routing','lineStyle','font'])if(params.has(key))extra[key]=params.get(key);
+  for(const key of ['columns','lineWidth','spacing','radius','travelerSize'])if(params.has(key))extra[key]=Number(params.get(key));
+  for(const key of ['arrows','showNumbers','transparent'])if(params.has(key)){if(!['true','false'].includes(params.get(key)))throw Error('Invalid boolean');extra[key]=params.get(key)==='true';}
+  if(params.has('connections'))extra.connections=JSON.parse(params.get('connections'));
+  return {...extra,steps:array('steps'),icons:array('icons'),preset:params.get('preset')||undefined,theme:params.get('theme')||undefined,traveler:params.get('traveler')||undefined,duration:params.has('duration')?Number(params.get('duration')):undefined,customTheme:params.has('customTheme')?JSON.parse(params.get('customTheme')):undefined};
 }

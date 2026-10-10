@@ -1,12 +1,12 @@
 import {ICONS,PRESETS,STEP_ICONS,TRAVELERS,THEMES,THEME_LABELS,THEME_FIELDS,normalizeConfig,renderSvg} from './svg.js';
-import {workflowMarkdown,EDITOR_URL} from './links.js';
+import {workflowMarkdown,EDITOR_URL,parseWorkflowParams,workflowParams} from './links.js';
 const $=id=>document.getElementById(id);
 const icon=name=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]||ICONS.file}</svg>`;
 document.querySelectorAll('[data-icon]').forEach(el=>el.innerHTML=icon(el.dataset.icon));
 let config=normalizeConfig(), paused=false, activeTab='markdown',toastTimer,iconStep=null;
 try {
   const query=new URLSearchParams(location.search);
-  if(query.has('steps')) config=normalizeConfig({steps:JSON.parse(query.get('steps')),icons:query.has('icons')?JSON.parse(query.get('icons')):undefined,theme:query.get('theme'),customTheme:query.has('customTheme')?JSON.parse(query.get('customTheme')):undefined,traveler:query.get('traveler'),duration:query.get('duration'),preset:query.get('preset')});
+  if(query.size) config=normalizeConfig(parseWorkflowParams(query));
   else {const saved=localStorage.getItem('readme-flow-config');if(saved) config=normalizeConfig(JSON.parse(saved));}
 } catch { toast('Could not load saved settings. Starting with a fresh workflow.'); }
 function toast(message){$('toast').textContent=message;$('toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('visible'),3500);}
@@ -15,16 +15,20 @@ $('embed-mode').addEventListener('change',()=>{updateCode();$('embed-hint').inne
 function updateCode(){$('code').textContent=activeTab==='markdown'?markdown():renderSvg(config);$('code-content').setAttribute('aria-labelledby',activeTab==='markdown'?'markdown-tab':'svg-tab');}
 function render(){
   $('preview').innerHTML=renderSvg(config,paused);
+  $('preview').style.setProperty('--svg-width',$('preview').querySelector('svg').getAttribute('width')+'px');
   const palette=config.theme==='custom'?config.customTheme:THEMES[config.theme],canvas=$('preview-canvas');
   canvas.className='preview-canvas';
   canvas.style.backgroundColor=palette.background;
   canvas.style.backgroundImage=`radial-gradient(${palette.line} .8px,transparent .8px)`;
   canvas.style.setProperty('--canvas-meta',palette.muted);
   $('custom-theme-preview').innerHTML=renderSvg({...config,theme:'custom'},paused);
-  $('workflow-name').textContent=PRESETS[config.preset].name+' workflow';
+  $('workflow-name').textContent=config.title||PRESETS[config.preset].name+' workflow';
   $('preview-meta').textContent=`${config.steps.length} steps · ${config.duration}s loop`;
-  $('step-count').textContent=`${config.steps.length} / 6`;
-  $('add-step').disabled=config.steps.length>=6;
+  $('step-count').textContent=`${config.steps.length} / 12`;
+  $('add-step').disabled=config.steps.length>=12;
+  $('columns').disabled=!['snake','grid'].includes(config.layout);
+  $('preview-canvas').classList.toggle('multi-row',config.layout!=='horizontal');
+  $('preview-canvas').classList.toggle('vertical-layout',config.layout==='vertical');
   $('speed-value').textContent=config.duration+'s';
   updateCode();
   try{localStorage.setItem('readme-flow-config',JSON.stringify(config));}catch{/* Storage can be disabled; exports still work. */}
@@ -36,10 +40,10 @@ function renderSteps(){
     row.innerHTML=`<div class="step-controls"><button class="reorder-button" aria-label="Move step ${i+1} up" title="Move up" ${i===0?'disabled':''}>⌃</button><button class="reorder-button" aria-label="Move step ${i+1} down" title="Move down" ${i===config.steps.length-1?'disabled':''}>⌄</button></div><div class="step-input"><button class="step-icon-button" aria-label="Choose icon for step ${i+1}" title="Choose icon: ${STEP_ICONS[config.icons[i]]}" aria-haspopup="dialog" aria-controls="icon-picker">${icon(config.icons[i])}</button><input maxlength="32" aria-label="Step ${i+1} label" placeholder="Step ${i+1}"><button class="icon-button remove-step" aria-label="Remove step ${i+1}" title="Remove step" ${config.steps.length<=3?'disabled':''}>${icon('close')}</button></div>`;
     const input=row.querySelector('input');input.value=label;
     input.addEventListener('input',()=>{config.steps[i]=input.value;render();});
-    input.addEventListener('blur',()=>{config=normalizeConfig(config);input.value=config.steps[i];render();});
+    input.addEventListener('blur',()=>{config=normalizeConfig(config);input.value=config.steps[i];renderConnections();render();});
     row.querySelector('.step-icon-button').addEventListener('click',()=>openIconPicker(i));
-    row.querySelector('.remove-step').addEventListener('click',()=>{config.steps.splice(i,1);config.icons.splice(i,1);renderSteps();render();});
-    const reorder=(direction)=>{for(const values of [config.steps,config.icons])[values[i],values[i+direction]]=[values[i+direction],values[i]];renderSteps();render();$('steps').children[i+direction].querySelector('input').focus();};
+    row.querySelector('.remove-step').addEventListener('click',()=>{config.steps.splice(i,1);config.icons.splice(i,1);config.connections=config.connections.filter(e=>e.from!==i&&e.to!==i).map(e=>({...e,from:e.from>i?e.from-1:e.from,to:e.to>i?e.to-1:e.to}));renderSteps();renderConnections();render();});
+    const reorder=(direction)=>{for(const values of [config.steps,config.icons])[values[i],values[i+direction]]=[values[i+direction],values[i]];const remap=value=>value===i?i+direction:value===i+direction?i:value;config.connections=config.connections.map(e=>({...e,from:remap(e.from),to:remap(e.to)}));renderSteps();renderConnections();render();$('steps').children[i+direction].querySelector('input').focus();};
     row.querySelectorAll('.reorder-button')[0].addEventListener('click',()=>reorder(-1));
     row.querySelectorAll('.reorder-button')[1].addEventListener('click',()=>reorder(1));
     $('steps').append(row);
@@ -63,6 +67,8 @@ $('close-icon-picker').addEventListener('click',()=>$('icon-picker').close());
 $('icon-picker').addEventListener('close',()=>{if(iconStep!==null)$('steps').children[iconStep]?.querySelector('.step-icon-button').focus();iconStep=null;});
 function syncControls(){
   $('preset').value=config.preset;$('speed').value=config.duration;
+  for(const [id,key]of Object.entries(extraControls))$(id).type==='checkbox'?$(id).checked=config[key]:$(id).value=config[key];
+  renderConnections();
   document.querySelectorAll('[data-theme]').forEach(b=>{const selected=b.dataset.theme===config.theme;b.classList.toggle('selected',selected);b.setAttribute('aria-pressed',selected);});
   $('traveler-icon').className=config.traveler==='dot'?'dot-icon':'';
   $('traveler-icon').innerHTML=TRAVELERS[config.traveler].icon?icon(TRAVELERS[config.traveler].icon):'';
@@ -70,11 +76,11 @@ function syncControls(){
   $('traveler-button').title='Moving element: '+TRAVELERS[config.traveler].name;
   $('preset-icon').innerHTML=icon(PRESETS[config.preset].icons[0]);
   for(const key of Object.keys(THEME_FIELDS)){$('color-'+key).value=config.customTheme[key];$('color-value-'+key).textContent=config.customTheme[key];}
-  renderSteps();render();
+  renderSteps();render();$('preview').scrollTop=0;$('preview').scrollLeft=0;
 }
-function choosePreset(preset){config=normalizeConfig({...config,preset,steps:PRESETS[preset].steps.slice(),icons:PRESETS[preset].icons.slice()});syncControls();}
+function choosePreset(preset){const p=PRESETS[preset];config=normalizeConfig({...config,preset,steps:p.steps.slice(),icons:p.icons.slice(),layout:p.layout||'horizontal',columns:p.columns||3,connectionMode:p.connections?'custom':'sequential',connections:p.connections||[]});syncControls();}
 $('preset').addEventListener('change',e=>choosePreset(e.target.value));
-$('add-step').addEventListener('click',()=>{if(config.steps.length>=6)return;config.steps.push('Step '+(config.steps.length+1));config.icons.push('file');renderSteps();render();openIconPicker(config.steps.length-1);});
+$('add-step').addEventListener('click',()=>{if(config.steps.length>=12)return;config.steps.push('Step '+(config.steps.length+1));config.icons.push('file');renderSteps();renderConnections();render();openIconPicker(config.steps.length-1);});
 for(const [name,palette]of Object.entries(THEMES)){
   const button=document.createElement('button');button.className='theme-option';button.dataset.theme=name;button.setAttribute('aria-pressed','false');
   button.innerHTML=`<span class="theme-swatch" style="--swatch-bg:${palette.background};--swatch-border:${palette.border};--swatch-card:${palette.card};--swatch-line:${palette.line}"><i></i><i></i><i></i></span><span>${THEME_LABELS[name]}</span><span class="theme-check" aria-hidden="true">✓</span>`;
@@ -123,7 +129,7 @@ async function copy(text,message){
 $('copy-markdown').addEventListener('click',()=>copy(markdown(),$('embed-mode').value==='local'?'Markdown copied. Add workflow.svg to your repo.':'Markdown copied. Paste it directly into your README.'));
 $('copy-code').addEventListener('click',()=>copy(activeTab==='markdown'?markdown():renderSvg(config),'Code copied to clipboard.'));
 $('download').addEventListener('click',()=>{const blob=new Blob([renderSvg(config)],{type:'image/svg+xml;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='workflow.svg';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('SVG downloaded. Your README is ready for some flow.');});
-$('share').addEventListener('click',()=>{const url=new URL(location.protocol==='file:'?EDITOR_URL:location.href);url.search='';url.hash='';for(const [k,v]of Object.entries(config)){if(k==='customTheme'&&config.theme!=='custom')continue;url.searchParams.set(k,typeof v==='object'?JSON.stringify(v):v);}copy(url.href,'Editor link copied. All your settings included.');});
+$('share').addEventListener('click',()=>{const url=new URL(location.protocol==='file:'?EDITOR_URL:location.href);url.search=workflowParams(config);url.hash='';copy(url.href,'Editor link copied. All your settings included.');});
 for(const [name,preset]of Object.entries(PRESETS)){
   if(!$('preset').querySelector(`option[value="${name}"]`)){const option=document.createElement('option');option.value=name;option.textContent=preset.name;$('preset').append(option);}
   const button=document.createElement('button');button.className='example';button.dataset.preset=name;
@@ -131,4 +137,32 @@ for(const [name,preset]of Object.entries(PRESETS)){
   $('examples').append(button);
 }
 document.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click',()=>{choosePreset(b.dataset.preset);document.querySelector('.builder').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});toast(PRESETS[b.dataset.preset].name+' preset loaded.');}));
+const extraControls={'workflow-title':'title','workflow-subtitle':'subtitle',layout:'layout',columns:'columns','connection-mode':'connectionMode',routing:'routing','line-style':'lineStyle','line-width':'lineWidth',arrows:'arrows',font:'font',spacing:'spacing',radius:'radius','traveler-size':'travelerSize','show-numbers':'showNumbers',transparent:'transparent'};
+for(const [id,key]of Object.entries(extraControls))$(id).addEventListener('input',()=>{
+  const input=$(id);
+  if(key==='connectionMode'&&input.value==='custom'&&config.connectionMode!=='custom'&&!config.connections.length)config.connections=config.steps.slice(1).map((_,i)=>({from:i,to:i+1,label:''}));
+  config[key]=input.type==='checkbox'?input.checked:['columns','lineWidth','spacing','radius','travelerSize'].includes(key)?Number(input.value):input.value;
+  config=normalizeConfig(config);if(key==='connectionMode')renderConnections();render();
+});
+function renderConnections(){
+  $('connection-editor').hidden=config.connectionMode!=='custom';$('connections').replaceChildren();
+  config.connections.forEach((edge,index)=>{
+    const row=document.createElement('div');row.className='connection-row';
+    for(const key of ['from','to']){
+      const select=document.createElement('select');select.setAttribute('aria-label',`Connection ${index+1} ${key}`);
+      config.steps.forEach((label,i)=>{const option=document.createElement('option');option.value=i;option.textContent=`${i+1}. ${label}`;option.selected=edge[key]===i;option.disabled=key==='from'?i===edge.to:i===edge.from;select.append(option);});
+      select.addEventListener('change',()=>{const next={...edge,[key]:Number(select.value)};if(config.connections.some((e,j)=>j!==index&&e.from===next.from&&e.to===next.to)){toast('That connection already exists.');renderConnections();return;}config.connections[index]=next;renderConnections();render();});row.append(select);
+    }
+    const label=document.createElement('input');label.maxLength=24;label.placeholder='Line label (optional)';label.value=edge.label;label.setAttribute('aria-label',`Connection ${index+1} label`);label.addEventListener('input',()=>{config.connections[index].label=label.value;render();});row.append(label);
+    const actions=document.createElement('div');actions.className='connection-actions';
+    for(const direction of [-1,1]){const move=document.createElement('button');move.className='icon-button';move.textContent=direction<0?'↑':'↓';move.setAttribute('aria-label',`Move connection ${index+1} ${direction<0?'up':'down'}`);move.disabled=index+direction<0||index+direction>=config.connections.length;move.addEventListener('click',()=>{[config.connections[index],config.connections[index+direction]]=[config.connections[index+direction],config.connections[index]];renderConnections();render();});actions.append(move);}
+    const remove=document.createElement('button');remove.className='icon-button';remove.setAttribute('aria-label',`Remove connection ${index+1}`);remove.innerHTML=icon('close');remove.addEventListener('click',()=>{config.connections.splice(index,1);renderConnections();render();});actions.append(remove);row.append(actions);$('connections').append(row);
+  });
+  $('add-connection').disabled=config.connections.length>=24;
+}
+$('add-connection').addEventListener('click',()=>{
+  if(config.connections.length>=24)return;
+  for(let from=0;from<config.steps.length;from++)for(let to=0;to<config.steps.length;to++)if(from!==to&&!config.connections.some(e=>e.from===from&&e.to===to)){config.connections.push({from,to,label:''});renderConnections();render();return;}
+  toast('All steps are already connected.');
+});
 selectTab('markdown');syncControls();
