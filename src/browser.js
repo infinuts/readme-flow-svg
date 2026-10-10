@@ -31,6 +31,11 @@ const PRESETS = {
   api: {name:'API request', steps:['Request','Authenticate','Process','Response'], icons:['request','shield','process','response']},
   deploy: {name:'Deployment', steps:['Commit','Test','Build','Deploy'], icons:['code','test','build','deploy']}
 };
+const STEP_ICONS = {
+  file:'File',upload:'Upload',shield:'Shield',check:'Check',compress:'Compress',
+  download:'Download',request:'Request',process:'Process',response:'Response',
+  code:'Code',test:'Test',build:'Build',deploy:'Deploy'
+};
 const THEMES = {
   light:{background:'#ffffff',card:'#ffffff',border:'#dce3df',text:'#293c34',muted:'#8b9891',accent:'#21845a',tint:'#eef8f1',line:'#d5dfd8'},
   dark:{background:'#151c20',card:'#1e292f',border:'#34464e',text:'#e1ebe6',muted:'#8caaa0',accent:'#62d39b',tint:'#223e32',line:'#34464e'},
@@ -43,7 +48,11 @@ function normalizeConfig(raw={}) {
   const preset=Object.hasOwn(PRESETS,raw.preset)?raw.preset:'files';
   const steps=Array.isArray(raw.steps)?raw.steps.slice(0,6).map(s=>String(s).trim().slice(0,32)):PRESETS[preset].steps.slice();
   while(steps.length<3) steps.push('Step '+(steps.length+1));
-  return {preset,steps:steps.map((s,i)=>s||'Step '+(i+1)),theme:Object.hasOwn(THEMES,raw.theme)?raw.theme:'light',traveler:raw.traveler==='file'?'file':'dot',duration:Math.max(2,Math.min(10,Number(raw.duration)||6))};
+  const icons=steps.map((_,i)=>{
+    const selected=Array.isArray(raw.icons)?raw.icons[i]:undefined;
+    return Object.hasOwn(STEP_ICONS,selected)?selected:PRESETS[preset].icons[i]||'file';
+  });
+  return {preset,steps:steps.map((s,i)=>s||'Step '+(i+1)),icons,theme:Object.hasOwn(THEMES,raw.theme)?raw.theme:'light',traveler:raw.traveler==='file'?'file':'dot',duration:Math.max(2,Math.min(10,Number(raw.duration)||6))};
 }
 function renderSvg(raw={},paused=false) {
   const c=normalizeConfig(raw), t=THEMES[c.theme], n=c.steps.length, gap=172, width=gap*(n-1)+164, x0=82, y=156;
@@ -56,7 +65,7 @@ function renderSvg(raw={},paused=false) {
     const x=x0+i*gap, start=i/n*100, end=(i+1)/n*100;
     const inactive=`fill:${t.card};stroke:${t.border}`,active=`fill:${t.tint};stroke:${t.accent}`;
     const keys=i===0?`0%,${(end-.01).toFixed(3)}%{${active}}${end.toFixed(3)}%,100%{${inactive}}`:`0%,${(start-.01).toFixed(3)}%,${end.toFixed(3)}%,100%{${inactive}}${start.toFixed(3)}%,${(end-.01).toFixed(3)}%{${active}}`;
-    const icon=ICONS[PRESETS[c.preset].icons[i]]||ICONS.file;
+    const icon=ICONS[c.icons[i]];
     return `<style>@keyframes stage${i}{${keys}}</style><g><rect class="stage" style="animation-name:stage${i}" x="${x-59}" y="43" width="118" height="95" rx="12" fill="${t.card}" stroke="${t.border}"/><text x="${x-45}" y="62" fill="${t.muted}" font-size="9">${String(i+1).padStart(2,'0')}</text><g transform="translate(${x-12} 65)" fill="none" stroke="${t.accent}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${icon}</g><text x="${x}" y="116" fill="${t.text}" text-anchor="middle" font-size="12" font-weight="500"${label.length>15?' textLength="102" lengthAdjust="spacingAndGlyphs"':''}>${escapeXml(label)}</text><circle cx="${x}" cy="${y}" r="3" fill="${t.line}"/></g>`;
   }).join('');
   const connectors=Array.from({length:n-1},(_,i)=>{const x=x0+i*gap;return `<path d="M${x+64} 91h43m-5-4 5 4-5 4" stroke="${t.line}" fill="none" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>`;}).join('');
@@ -67,10 +76,10 @@ function renderSvg(raw={},paused=false) {
 const $=id=>document.getElementById(id);
 const icon=name=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]||ICONS.file}</svg>`;
 document.querySelectorAll('[data-icon]').forEach(el=>el.innerHTML=icon(el.dataset.icon));
-let config=normalizeConfig(), paused=false, activeTab='markdown',toastTimer;
+let config=normalizeConfig(), paused=false, activeTab='markdown',toastTimer,iconStep=null;
 try {
   const query=new URLSearchParams(location.search);
-  if(query.has('steps')) config=normalizeConfig({steps:JSON.parse(query.get('steps')),theme:query.get('theme'),traveler:query.get('traveler'),duration:query.get('duration'),preset:query.get('preset')});
+  if(query.has('steps')) config=normalizeConfig({steps:JSON.parse(query.get('steps')),icons:query.has('icons')?JSON.parse(query.get('icons')):undefined,theme:query.get('theme'),traveler:query.get('traveler'),duration:query.get('duration'),preset:query.get('preset')});
   else {const saved=localStorage.getItem('readme-flow-config');if(saved) config=normalizeConfig(JSON.parse(saved));}
 } catch { toast('Could not load saved settings. Starting with a fresh workflow.'); }
 function toast(message){$('toast').textContent=message;$('toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('visible'),3500);}
@@ -91,17 +100,34 @@ function renderSteps(){
   $('steps').replaceChildren();
   config.steps.forEach((label,i)=>{
     const row=document.createElement('div');row.className='step-row';
-    row.innerHTML=`<div class="step-controls"><button class="reorder-button" aria-label="Move step ${i+1} up" title="Move up" ${i===0?'disabled':''}>⌃</button><button class="reorder-button" aria-label="Move step ${i+1} down" title="Move down" ${i===config.steps.length-1?'disabled':''}>⌄</button></div><div class="step-input"><span class="step-number">${String(i+1).padStart(2,'0')}</span><input maxlength="32" aria-label="Step ${i+1} label" placeholder="Step ${i+1}"><button class="icon-button" aria-label="Remove step ${i+1}" title="Remove step" ${config.steps.length<=3?'disabled':''}>${icon('close')}</button></div>`;
+    row.innerHTML=`<div class="step-controls"><button class="reorder-button" aria-label="Move step ${i+1} up" title="Move up" ${i===0?'disabled':''}>⌃</button><button class="reorder-button" aria-label="Move step ${i+1} down" title="Move down" ${i===config.steps.length-1?'disabled':''}>⌄</button></div><div class="step-input"><button class="step-icon-button" aria-label="Choose icon for step ${i+1}" title="Choose icon: ${STEP_ICONS[config.icons[i]]}" aria-haspopup="dialog" aria-controls="icon-picker">${icon(config.icons[i])}</button><input maxlength="32" aria-label="Step ${i+1} label" placeholder="Step ${i+1}"><button class="icon-button remove-step" aria-label="Remove step ${i+1}" title="Remove step" ${config.steps.length<=3?'disabled':''}>${icon('close')}</button></div>`;
     const input=row.querySelector('input');input.value=label;
     input.addEventListener('input',()=>{config.steps[i]=input.value;render();});
     input.addEventListener('blur',()=>{config=normalizeConfig(config);input.value=config.steps[i];render();});
-    row.querySelector('.step-input button').addEventListener('click',()=>{config.steps.splice(i,1);renderSteps();render();});
-    const reorder=(direction)=>{[config.steps[i],config.steps[i+direction]]=[config.steps[i+direction],config.steps[i]];renderSteps();render();$('steps').children[i+direction].querySelector('input').focus();};
+    row.querySelector('.step-icon-button').addEventListener('click',()=>openIconPicker(i));
+    row.querySelector('.remove-step').addEventListener('click',()=>{config.steps.splice(i,1);config.icons.splice(i,1);renderSteps();render();});
+    const reorder=(direction)=>{for(const values of [config.steps,config.icons])[values[i],values[i+direction]]=[values[i+direction],values[i]];renderSteps();render();$('steps').children[i+direction].querySelector('input').focus();};
     row.querySelectorAll('.reorder-button')[0].addEventListener('click',()=>reorder(-1));
     row.querySelectorAll('.reorder-button')[1].addEventListener('click',()=>reorder(1));
     $('steps').append(row);
   });
 }
+function openIconPicker(index){
+  iconStep=index;
+  $('icon-picker-step').textContent=`Step ${index+1}: ${config.steps[index]||'Untitled step'}`;
+  $('icon-options').replaceChildren();
+  for(const [name,label] of Object.entries(STEP_ICONS)){
+    const button=document.createElement('button');button.type='button';button.className='icon-option';
+    button.setAttribute('aria-label',label+' icon');button.setAttribute('aria-pressed',name===config.icons[index]);
+    button.innerHTML=icon(name)+`<span>${label}</span>`;
+    button.addEventListener('click',()=>{config.icons[index]=name;renderSteps();render();$('icon-picker').close();});
+    $('icon-options').append(button);
+  }
+  $('icon-picker').showModal();
+  $('icon-options').querySelector('[aria-pressed="true"]').focus();
+}
+$('close-icon-picker').addEventListener('click',()=>$('icon-picker').close());
+$('icon-picker').addEventListener('close',()=>{if(iconStep!==null)$('steps').children[iconStep]?.querySelector('.step-icon-button').focus();iconStep=null;});
 function syncControls(){
   $('preset').value=config.preset;$('speed').value=config.duration;
   document.querySelectorAll('[data-theme]').forEach(b=>{const selected=b.dataset.theme===config.theme;b.classList.toggle('selected',selected);b.setAttribute('aria-pressed',selected);});
@@ -109,9 +135,9 @@ function syncControls(){
   $('preset-icon').innerHTML=icon(config.preset==='api'?'request':config.preset==='deploy'?'deploy':'file');
   renderSteps();render();
 }
-function choosePreset(preset){config=normalizeConfig({...config,preset,steps:PRESETS[preset].steps.slice()});syncControls();}
+function choosePreset(preset){config=normalizeConfig({...config,preset,steps:PRESETS[preset].steps.slice(),icons:PRESETS[preset].icons.slice()});syncControls();}
 $('preset').addEventListener('change',e=>choosePreset(e.target.value));
-$('add-step').addEventListener('click',()=>{if(config.steps.length>=6)return;config.steps.push('Step '+(config.steps.length+1));renderSteps();render();$('steps').lastElementChild.querySelector('input').focus();});
+$('add-step').addEventListener('click',()=>{if(config.steps.length>=6)return;config.steps.push('Step '+(config.steps.length+1));config.icons.push('file');renderSteps();render();openIconPicker(config.steps.length-1);});
 document.querySelectorAll('[data-theme]').forEach(b=>b.addEventListener('click',()=>{config.theme=b.dataset.theme;syncControls();}));
 document.querySelectorAll('[data-traveler]').forEach(b=>b.addEventListener('click',()=>{config.traveler=b.dataset.traveler;syncControls();}));
 $('speed').addEventListener('input',e=>{config.duration=Number(e.target.value);render();});
@@ -134,7 +160,7 @@ async function copy(text,message){
 $('copy-markdown').addEventListener('click',()=>copy(markdown(),'Markdown copied. Add workflow.svg to your repo.'));
 $('copy-code').addEventListener('click',()=>copy(activeTab==='markdown'?markdown():renderSvg(config),'Code copied to clipboard.'));
 $('download').addEventListener('click',()=>{const blob=new Blob([renderSvg(config)],{type:'image/svg+xml;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='workflow.svg';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('SVG downloaded. Your README is ready for some flow.');});
-$('share').addEventListener('click',()=>{const url=new URL(location.protocol==='file:'?'https://infinuts.github.io/readme-flow-svg/':location.href);url.search='';url.hash='';for(const [k,v]of Object.entries(config))url.searchParams.set(k,k==='steps'?JSON.stringify(v):v);copy(url.href,'Editor link copied. All your settings included.');});
+$('share').addEventListener('click',()=>{const url=new URL(location.protocol==='file:'?'https://infinuts.github.io/readme-flow-svg/':location.href);url.search='';url.hash='';for(const [k,v]of Object.entries(config))url.searchParams.set(k,Array.isArray(v)?JSON.stringify(v):v);copy(url.href,'Editor link copied. All your settings included.');});
 document.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click',()=>{choosePreset(b.dataset.preset);document.querySelector('.builder').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});toast(PRESETS[b.dataset.preset].name+' preset loaded.');}));
 selectTab('markdown');syncControls();
 

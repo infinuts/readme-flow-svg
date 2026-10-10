@@ -28,6 +28,11 @@ export const PRESETS = {
   api: {name:'API request', steps:['Request','Authenticate','Process','Response'], icons:['request','shield','process','response']},
   deploy: {name:'Deployment', steps:['Commit','Test','Build','Deploy'], icons:['code','test','build','deploy']}
 };
+export const STEP_ICONS = {
+  file:'File',upload:'Upload',shield:'Shield',check:'Check',compress:'Compress',
+  download:'Download',request:'Request',process:'Process',response:'Response',
+  code:'Code',test:'Test',build:'Build',deploy:'Deploy'
+};
 export const THEMES = {
   light:{background:'#ffffff',card:'#ffffff',border:'#dce3df',text:'#293c34',muted:'#8b9891',accent:'#21845a',tint:'#eef8f1',line:'#d5dfd8'},
   dark:{background:'#151c20',card:'#1e292f',border:'#34464e',text:'#e1ebe6',muted:'#8caaa0',accent:'#62d39b',tint:'#223e32',line:'#34464e'},
@@ -40,7 +45,11 @@ export function normalizeConfig(raw={}) {
   const preset=Object.hasOwn(PRESETS,raw.preset)?raw.preset:'files';
   const steps=Array.isArray(raw.steps)?raw.steps.slice(0,6).map(s=>String(s).trim().slice(0,32)):PRESETS[preset].steps.slice();
   while(steps.length<3) steps.push('Step '+(steps.length+1));
-  return {preset,steps:steps.map((s,i)=>s||'Step '+(i+1)),theme:Object.hasOwn(THEMES,raw.theme)?raw.theme:'light',traveler:raw.traveler==='file'?'file':'dot',duration:Math.max(2,Math.min(10,Number(raw.duration)||6))};
+  const icons=steps.map((_,i)=>{
+    const selected=Array.isArray(raw.icons)?raw.icons[i]:undefined;
+    return Object.hasOwn(STEP_ICONS,selected)?selected:PRESETS[preset].icons[i]||'file';
+  });
+  return {preset,steps:steps.map((s,i)=>s||'Step '+(i+1)),icons,theme:Object.hasOwn(THEMES,raw.theme)?raw.theme:'light',traveler:raw.traveler==='file'?'file':'dot',duration:Math.max(2,Math.min(10,Number(raw.duration)||6))};
 }
 export function renderSvg(raw={},paused=false) {
   const c=normalizeConfig(raw), t=THEMES[c.theme], n=c.steps.length, gap=172, width=gap*(n-1)+164, x0=82, y=156;
@@ -53,7 +62,7 @@ export function renderSvg(raw={},paused=false) {
     const x=x0+i*gap, start=i/n*100, end=(i+1)/n*100;
     const inactive=`fill:${t.card};stroke:${t.border}`,active=`fill:${t.tint};stroke:${t.accent}`;
     const keys=i===0?`0%,${(end-.01).toFixed(3)}%{${active}}${end.toFixed(3)}%,100%{${inactive}}`:`0%,${(start-.01).toFixed(3)}%,${end.toFixed(3)}%,100%{${inactive}}${start.toFixed(3)}%,${(end-.01).toFixed(3)}%{${active}}`;
-    const icon=ICONS[PRESETS[c.preset].icons[i]]||ICONS.file;
+    const icon=ICONS[c.icons[i]];
     return `<style>@keyframes stage${i}{${keys}}</style><g><rect class="stage" style="animation-name:stage${i}" x="${x-59}" y="43" width="118" height="95" rx="12" fill="${t.card}" stroke="${t.border}"/><text x="${x-45}" y="62" fill="${t.muted}" font-size="9">${String(i+1).padStart(2,'0')}</text><g transform="translate(${x-12} 65)" fill="none" stroke="${t.accent}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${icon}</g><text x="${x}" y="116" fill="${t.text}" text-anchor="middle" font-size="12" font-weight="500"${label.length>15?' textLength="102" lengthAdjust="spacingAndGlyphs"':''}>${escapeXml(label)}</text><circle cx="${x}" cy="${y}" r="3" fill="${t.line}"/></g>`;
   }).join('');
   const connectors=Array.from({length:n-1},(_,i)=>{const x=x0+i*gap;return `<path d="M${x+64} 91h43m-5-4 5 4-5 4" stroke="${t.line}" fill="none" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>`;}).join('');

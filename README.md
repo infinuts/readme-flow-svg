@@ -6,7 +6,7 @@ Create an animated workflow for your GitHub README.
 
 ![Upload → Validate → Compress → Download](./examples/light.svg)
 
-Enter three to six steps and watch a dot or file move through them. The preview updates as you edit. You can change the labels, reorder stages, adjust the loop duration, and choose a light, dark, or terminal theme.
+Enter three to six steps and watch a dot or file move through them. The preview updates as you edit. You can change the labels and icons, reorder stages, adjust the loop duration, and choose a light, dark, or terminal theme.
 
 The generator runs in your browser. You don't need an account or your own deployment.
 
@@ -16,6 +16,8 @@ The generator runs in your browser. You don't need an account or your own deploy
 2. Edit the steps and choose how the animation looks.
 3. Download `workflow.svg` and put it beside your repository's README.
 4. Paste the copied Markdown: `![Your workflow](./workflow.svg)`.
+
+Adding a step opens an icon picker. Click the icon beside any existing step to change it. Each icon stays with its step when you reorder the workflow.
 
 The SVG contains its own animation and icons. It doesn't need scripts, remote fonts, or an image service.
 
