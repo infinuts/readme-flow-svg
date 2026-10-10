@@ -31,7 +31,7 @@ Finished examples live in `src/gallery.js`. Each entry has an ID, name, descript
 
 Presets, palettes, and icons live in `src/svg.js`. Editor behavior lives in `src/app.js`, with layout in `index.html` and styles in `src/style.css`.
 
-Run `npm ci`, `npm run lint`, `npm run type-check`, `npm run format:check`, `npm test`, and `npm run build`. Include regenerated `src/browser.js` and SVG assets in your pull request. Run `npm run build:api` after changing the HTTP handler or MCP tools.
+Run `npm ci`, `npm run lint`, `npm run type-check`, `npm run format:check`, `npm test`, and `npm run build`. Include regenerated `src/browser.js`, `src/font-engine.js`, and SVG assets in your pull request. Run `npm run build:api` after changing the HTTP handler or MCP tools.
 
 Keep exported SVGs self-contained, escape user text, and preserve reduced-motion support. Don't include scripts, external assets, or `foreignObject` in generated SVGs.
 

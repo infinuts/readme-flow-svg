@@ -17,6 +17,7 @@ Changes are recorded here without implying a package release.
 
 - Roomier collapsible controls, desktop sticky preview, and mobile sizing.
 - System fonts replace the page's external font stylesheet.
+- Optional font outlining loads on demand; production CSS is minified.
 - README now leads with usage; advanced integration docs live under `docs/`.
 - Preview accessibility separates interactive cards from exported image semantics.
 

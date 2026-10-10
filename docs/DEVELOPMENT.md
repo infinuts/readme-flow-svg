@@ -58,7 +58,7 @@ Without MCP, POST a JSON configuration to `/generate` on the image service. It r
 
 Download or clone this repository and open `index.html` in your browser. The editor works without a server.
 
-To change the editor, use Node.js 22 or newer and install dependencies with `npm ci`. The build bundles the font engine into a browser script, so the built editor still works when opening `index.html` directly.
+To change the editor, use Node.js 22 or newer and install dependencies with `npm ci`. The build bundles the font engine into a separate script loaded only for Google Fonts, so the built editor still works when opening `index.html` directly.
 
 ```sh
 npm ci

@@ -22,7 +22,8 @@ HTTP query → parseWorkflowParams → shared renderer → image/svg+xml
 - `src/markdown.js` handles custom Markdown alt text without touching image URLs.
 - `src/gallery.js` supplies both the gallery previews and their editor settings.
 - `src/fonts.js` uses fontkit to outline optional fonts. Built-in fonts require
-  no network. Google Fonts requests use the existing `/font` endpoint.
+  no network. `src/load-font-engine.js` loads the generated `src/font-engine.js`
+  only when requested. Google Fonts requests use the existing `/font` endpoint.
 - `server/handler.js` serves the optional stateless image API; `api/` adapts it
   to Vercel. `mcp/server.mjs` exposes the generator through MCP.
 

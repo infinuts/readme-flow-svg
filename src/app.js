@@ -18,7 +18,8 @@ import {
   parseWorkflowParams,
   workflowParams,
 } from './links.js';
-import { parseFont, outlineSvg } from './fonts.js';
+import { loadFontEngine } from './load-font-engine.js';
+let fontEngine;
 import { GALLERY } from './gallery.js';
 import { COMMUNITY_REPOS } from './community.js';
 const $ = (id) => document.getElementById(id);
@@ -39,7 +40,7 @@ function currentSvg(settings = config, isPaused = false) {
   const svg = renderSvg(settings, isPaused),
     entry = fontCache.get(settings.googleFont + ':' + settings.fontWeight);
   return settings.font === 'google' && entry?.font
-    ? outlineSvg(svg, entry.font, settings.googleFont)
+    ? fontEngine.outlineSvg(svg, entry.font, settings.googleFont)
     : svg;
 }
 function updateFont() {
@@ -69,7 +70,8 @@ function updateFont() {
           signal: AbortSignal.timeout(20000),
         });
       if (!response.ok) throw Error((await response.json()).error || 'Could not load this font.');
-      fontCache.set(key, { font: parseFont(await response.arrayBuffer()) });
+      fontEngine = await loadFontEngine();
+      fontCache.set(key, { font: fontEngine.parseFont(await response.arrayBuffer()) });
     } catch (error) {
       fontCache.set(key, { error: error.message || 'Could not load this font. Try again.' });
     }
@@ -145,7 +147,7 @@ function render() {
     card.setAttribute('role', 'button');
     card.setAttribute(
       'aria-label',
-      `Move ${config.steps[Number(card.dataset.step)]} card. Use arrow keys to move.`,
+      `${card.textContent.trim() || config.steps[Number(card.dataset.step)]}. Use arrow keys to move this card.`,
     );
   }
   try {
@@ -486,7 +488,7 @@ for (const [name, preset] of Object.entries(PRESETS)) {
 for (const example of GALLERY) {
   const card = document.createElement('article');
   card.className = 'gallery-card';
-  card.innerHTML = `<div class="gallery-preview"><img src="./assets/gallery/${example.id}.svg" alt="${example.name} animated workflow" width="730" height="300" loading="lazy" decoding="async"></div><div class="gallery-caption"><div><h3>${example.name}</h3><p>${example.description}</p></div><button type="button" class="button secondary" data-gallery="${example.id}" aria-label="Use ${example.name} workflow">Use this ${icon('arrow')}</button></div>`;
+  card.innerHTML = `<div class="gallery-preview"><img src="./assets/gallery/${example.id}.svg" alt="${example.name} animated workflow" width="730" height="300" loading="lazy" decoding="async"></div><div class="gallery-caption"><div><h3>${example.name}</h3><p>${example.description}</p></div><button type="button" class="button secondary" data-gallery="${example.id}" aria-label="Use this ${example.name} workflow">Use this ${icon('arrow')}</button></div>`;
   card.querySelector('.gallery-preview').style.backgroundColor =
     THEMES[example.config.theme].background;
   card.querySelector('button').addEventListener('click', () => {

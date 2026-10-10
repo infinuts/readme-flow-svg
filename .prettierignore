@@ -4,6 +4,7 @@ dist/
 .api-build/
 .vercel/
 src/browser.js
+src/font-engine.js
 src/svg.js
 src/links.js
 assets/**/*.svg

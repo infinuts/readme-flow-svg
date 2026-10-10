@@ -22,4 +22,4 @@ jobs:
       - run: npm run build
       - run: npm run build:api
       - name: Verify generated assets are committed
-        run: git diff --exit-code -- src/browser.js assets/gallery examples README.md
+        run: git diff --exit-code -- src/browser.js src/font-engine.js assets/gallery examples README.md

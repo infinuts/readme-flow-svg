@@ -777,62 +777,6 @@ pre {
   color: var(--muted);
   margin: 0;
 }
-.how {
-  max-width: 1190px;
-  margin: 55px auto 45px;
-  scroll-margin-top: 30px;
-}
-.how > h2 {
-  font-size: 22px;
-  letter-spacing: -0.6px;
-  font-weight: 550;
-  margin-bottom: 23px;
-}
-.how-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 40px;
-}
-.how-grid > div {
-  position: relative;
-  padding-left: 35px;
-}
-.how-grid > div > span {
-  position: absolute;
-  left: 0;
-  top: 1px;
-  font:
-    11px ui-monospace,
-    monospace;
-  color: var(--muted);
-}
-.how-grid h3 {
-  font-size: 12px;
-  margin-bottom: 7px;
-  font-weight: 600;
-}
-.how-grid p {
-  font-size: 11px;
-  line-height: 1.8;
-  color: var(--muted);
-}
-.how details {
-  margin-top: 20px;
-  border-top: 1px solid var(--border);
-  padding-top: 19px;
-  max-width: 740px;
-}
-.how summary {
-  font-size: 12px;
-  color: var(--muted);
-  cursor: pointer;
-}
-.how details p {
-  font-size: 12px;
-  line-height: 1.8;
-  color: var(--muted);
-  margin-top: 12px;
-}
 .footer {
   max-width: 1240px;
   margin: auto;
@@ -873,22 +817,6 @@ pre {
   opacity: 1;
   transform: translate(-50%, 0);
 }
-.preview-canvas.dark-preview {
-  background-color: var(--ink);
-  background-image: radial-gradient(var(--ink) 0.8px, transparent 0.8px);
-}
-.preview-canvas.terminal-preview {
-  background-color: var(--ink);
-  background-image: radial-gradient(var(--ink) 0.8px, transparent 0.8px);
-}
-.dark-preview .canvas-title,
-.dark-preview .canvas-footer {
-  color: var(--muted);
-}
-.terminal-preview .canvas-title,
-.terminal-preview .canvas-footer {
-  color: var(--muted);
-}
 @media (min-width: 1450px) {
   .hero {
     padding-top: 61px;
@@ -908,8 +836,7 @@ pre {
     margin-right: 30px;
   }
   .builder,
-  .examples,
-  .how {
+  .examples {
     margin-left: 40px;
     margin-right: 40px;
   }
@@ -930,8 +857,7 @@ pre {
     grid-template-columns: 285px minmax(0, 1fr);
   }
   .builder,
-  .examples,
-  .how {
+  .examples {
     margin-left: 24px;
     margin-right: 24px;
   }
@@ -972,9 +898,6 @@ pre {
   }
   .hero h1 {
     letter-spacing: -1.6px;
-  }
-  .how-grid {
-    gap: 20px;
   }
 }
 @media (max-width: 700px) {
@@ -1021,8 +944,7 @@ pre {
     grid-template-columns: 1fr;
   }
   .builder,
-  .examples,
-  .how {
+  .examples {
     margin-left: 16px;
     margin-right: 16px;
   }
@@ -1066,19 +988,6 @@ pre {
   }
   .examples {
     margin-top: 29px;
-  }
-  .how {
-    margin-top: 37px;
-  }
-  .how > h2 {
-    font-size: 20px;
-  }
-  .how-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-  .how-grid p {
-    margin-bottom: 0;
   }
   .footer {
     margin: 0 20px;

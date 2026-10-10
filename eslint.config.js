@@ -9,6 +9,7 @@ export default [
       '.qa/**',
       '.api-build/**',
       'src/browser.js',
+      'src/font-engine.js',
       '.vercel/**',
     ],
   },
