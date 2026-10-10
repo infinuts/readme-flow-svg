@@ -1,2 +1,2 @@
-import {route} from '../server/handler.js';
+import { route } from '../server/handler.js';
 export default route('/generate');

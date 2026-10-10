@@ -8,7 +8,11 @@
     "test": "node scripts/sync-skills.mjs --check && node --test tests/*.test.mjs",
     "sync:skills": "node scripts/sync-skills.mjs",
     "build:api": "node scripts/build-api.mjs",
-    "mcp": "node mcp/stdio.mjs"
+    "mcp": "node mcp/stdio.mjs",
+    "lint": "eslint .",
+    "type-check": "tsc -p tsconfig.json",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@modelcontextprotocol/client": "^2.3.1",
@@ -17,6 +21,11 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "esbuild": "^0.28.2"
+    "@eslint/js": "^10.0.1",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.12.0",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.10",
+    "typescript": "^7.0.2"
   }
 }

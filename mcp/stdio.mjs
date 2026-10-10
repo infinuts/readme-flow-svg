@@ -1,3 +1,3 @@
-import {serveStdio} from '@modelcontextprotocol/server/stdio';
-import {createServer} from './server.mjs';
+import { serveStdio } from '@modelcontextprotocol/server/stdio';
+import { createServer } from './server.mjs';
 await serveStdio(createServer);

@@ -1,12 +1,25 @@
-import {build} from 'esbuild';
-import {mkdir,rm} from 'node:fs/promises';
-import {resolve,dirname} from 'node:path';
-import {pathToFileURL} from 'node:url';
-const output=resolve('.api-build');if(dirname(output)!==process.cwd())throw Error('API output must stay inside the repository.');
-await rm(output,{recursive:true,force:true});await mkdir(output,{recursive:true});
-await build({entryPoints:['server/handler.js'],outfile:resolve(output,'index.mjs'),bundle:true,format:'esm',platform:'node',target:'node22',minify:true});
-const worker=await import(pathToFileURL(resolve(output,'index.mjs')));
-if(typeof worker.default?.fetch!=='function')throw Error('API must export fetch.');
-const response=await worker.default.fetch(new Request('https://example.com/svg?steps=Upload;Validate;Download'));
-if(response.status!==200||!response.headers.get('Content-Type')?.includes('image/svg+xml'))throw Error('Built API failed SVG verification.');
+import { build } from 'esbuild';
+import { mkdir, rm } from 'node:fs/promises';
+import { resolve, dirname } from 'node:path';
+import { pathToFileURL } from 'node:url';
+const output = resolve('.api-build');
+if (dirname(output) !== process.cwd()) throw Error('API output must stay inside the repository.');
+await rm(output, { recursive: true, force: true });
+await mkdir(output, { recursive: true });
+await build({
+  entryPoints: ['server/handler.js'],
+  outfile: resolve(output, 'index.mjs'),
+  bundle: true,
+  format: 'esm',
+  platform: 'node',
+  target: 'node22',
+  minify: true,
+});
+const worker = await import(pathToFileURL(resolve(output, 'index.mjs')));
+if (typeof worker.default?.fetch !== 'function') throw Error('API must export fetch.');
+const response = await worker.default.fetch(
+  new Request('https://example.com/svg?steps=Upload;Validate;Download'),
+);
+if (response.status !== 200 || !response.headers.get('Content-Type')?.includes('image/svg+xml'))
+  throw Error('Built API failed SVG verification.');
 console.log('Built and verified the SVG/MCP API in .api-build/index.mjs.');

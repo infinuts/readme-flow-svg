@@ -3,7 +3,11 @@
   const root = document.documentElement;
   const system = matchMedia('(prefers-color-scheme: dark)');
   let preference = 'system';
-  try { preference = localStorage.getItem('readme-flow-appearance') || 'system'; } catch { /* Storage is optional. */ }
+  try {
+    preference = localStorage.getItem('readme-flow-appearance') || 'system';
+  } catch {
+    /* Storage is optional. */
+  }
   if (!['system', 'light', 'dark'].includes(preference)) preference = 'system';
   function apply() {
     const dark = preference === 'dark' || (preference === 'system' && system.matches);
@@ -19,7 +23,11 @@
     select.value = preference;
     select.addEventListener('change', () => {
       preference = select.value;
-      try { localStorage.setItem('readme-flow-appearance', preference); } catch { /* Storage is optional. */ }
+      try {
+        localStorage.setItem('readme-flow-appearance', preference);
+      } catch {
+        /* Storage is optional. */
+      }
       apply();
     });
   });

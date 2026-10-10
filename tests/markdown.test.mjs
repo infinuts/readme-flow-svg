@@ -5,7 +5,7 @@ import { workflowMarkdown } from '../src/links.js';
 
 test('custom alt text preserves hosted URLs, local paths, and automatic descriptions', () => {
   for (const local of [true, false]) {
-    const original = workflowMarkdown({steps: ['Read', 'Build', 'Export']}, local);
+    const original = workflowMarkdown({ steps: ['Read', 'Build', 'Export'] }, local);
     assert.equal(withAltText(original, '  '), original);
     const edited = withAltText(original, 'Build [a] \\ workflow\n<safe> $&');
     assert.ok(edited.includes('![Build  a    workflow  safe  $&]'));

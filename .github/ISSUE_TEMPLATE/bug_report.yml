@@ -1,0 +1,22 @@
+name: Bug report
+description: Report an editor, export, or hosted-image problem.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Include what you expected and the steps to reproduce it.
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and operating system
+      placeholder: Chrome on Windows, Safari on iOS, etc.
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Example or screenshot
+      description: Optional editor link, minimal SVG, or screenshot. Remove private labels and secrets; URL settings are public.
