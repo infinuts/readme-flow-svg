@@ -9,7 +9,7 @@ Animated SVG workflows for GitHub READMEs, made in your browser.
 [![CI](https://github.com/infinuts/readme-flow-svg/actions/workflows/ci.yml/badge.svg)](https://github.com/infinuts/readme-flow-svg/actions/workflows/ci.yml)
 [![Pages deploy](https://github.com/infinuts/readme-flow-svg/actions/workflows/pages.yml/badge.svg)](https://github.com/infinuts/readme-flow-svg/actions/workflows/pages.yml)
 
-[![M8ven Verified](https://m8ven.ai/badge/mcp/infinuts-readme-flow-svg-1hazkz?variant=verified&v=741620e1651d8e839abe1a673910655e)](https://m8ven.ai/mcp/infinuts-readme-flow-svg-1hazkz?s=readme)
+[![M8ven Verified](https://m8ven.ai/badge/mcp/infinuts-readme-flow-svg-1hazkz?variant=verified)](https://m8ven.ai/mcp/infinuts-readme-flow-svg-1hazkz?s=readme)
 
 [Open the editor](https://readme-flow-svg.vercel.app/) · [Examples](./examples/README.md) · [Report a bug](https://github.com/infinuts/readme-flow-svg/issues/new?template=bug_report.yml)
 
