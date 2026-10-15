@@ -19,6 +19,7 @@ if (dirname(dist) !== process.cwd())
 await rm(dist, { recursive: true, force: true });
 await mkdir('dist', { recursive: true });
 await copyFile('index.html', 'dist/index.html');
+await copyFile('privacy.html', 'dist/privacy.html');
 await cp('src', 'dist/src', { recursive: true });
 await buildAssets({ entryPoints: ['src/style.css'], outfile: 'dist/src/style.css', minify: true });
 await cp('assets', 'dist/assets', { recursive: true });

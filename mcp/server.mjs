@@ -119,12 +119,6 @@ export function options() {
 }
 export function createServer() {
   const server = new McpServer({ name: 'readme-flow-svg', version: '1.1.0' });
-  const annotations = {
-    readOnlyHint: true,
-    destructiveHint: false,
-    idempotentHint: true,
-    openWorldHint: false,
-  };
   server.registerTool(
     'generate_workflow',
     {
@@ -132,7 +126,12 @@ export function createServer() {
       description:
         'Generate an animated SVG and Markdown embed from 3–12 steps. Supports titles, subtitles, horizontal/vertical/snake/grid layouts, labeled custom connections (zero-based from/to step indices), branches, loops, line styles, spacing, fonts, transparent backgrounds, themes and icons. Returns SVG source, image URL, Markdown, and editor link. Custom connections animate in array order; set connectionMode to custom to use them.',
       inputSchema: workflowSchema,
-      annotations: { ...annotations, openWorldHint: true },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
     },
     async (args) => {
       const output = await generateWorkflowAsync(args);
@@ -149,7 +148,12 @@ export function createServer() {
       description:
         'List supported presets, theme palettes, moving elements, stage icons, and custom color fields.',
       inputSchema: z.object({}),
-      annotations,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
     },
     async () => {
       const output = options();

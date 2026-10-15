@@ -32,6 +32,13 @@ https://readme-flow-svg.vercel.app/mcp
 
 It exposes `generate_workflow` and `list_options` through public Streamable HTTP. Any compatible MCP client can connect without OAuth. Both tools generate output or list settings; they do not edit files or publish changes.
 
+Each tool declares all four annotation hints as boolean literals in `mcp/server.mjs`.
+Both are read-only, non-destructive, and idempotent. `generate_workflow` has
+`openWorldHint: true` because optional Google Fonts can require public internet requests;
+`list_options` has `openWorldHint: false`. Tests check the annotations returned over
+both HTTP and stdio. The [privacy policy](../privacy.html) ships with the static site at
+`https://readme-flow-svg.vercel.app/privacy.html`.
+
 For a local stdio server that doesn't require a service login, clone the repository and run:
 
 ```sh
@@ -72,6 +79,19 @@ Open http://127.0.0.1:4173. After editing the source, rebuild and refresh. The b
 npm ci
 npm test
 ```
+
+### Generated browser scripts
+
+The two checked-in browser bundles keep the editor working when `index.html` is opened
+directly. `src/browser.js` starts at `src/app.js`; the optional `src/font-engine.js`
+starts at `src/fonts.js` and includes fontkit and its dependencies. Dependency versions
+are pinned in `package-lock.json`, and licenses are listed in `THIRD_PARTY_LICENSES.md`.
+
+`scripts/bundle.mjs` builds both files without minification, keeping names and module-path
+comments readable for review. Their headers identify the entry points and rebuild command.
+`.gitattributes` marks them as generated so GitHub can collapse their diffs. To reproduce
+them, run `npm ci` followed by `npm run build`; CI checks that the generated files match
+the committed copies. Edit source modules and commit the regenerated scripts with them.
 
 ## Deploy a fork
 
