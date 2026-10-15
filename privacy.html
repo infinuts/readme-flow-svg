@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="How readme-flow-svg handles workflow settings and requests."
+    />
+    <meta name="referrer" content="no-referrer" />
+    <title>Privacy policy | readme-flow-svg</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, sans-serif;
+        line-height: 1.7;
+      }
+      body {
+        max-width: 48rem;
+        margin: auto;
+        padding: 2rem 1.25rem 4rem;
+        overflow-wrap: anywhere;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      h2 {
+        margin-top: 2rem;
+      }
+      a {
+        text-underline-offset: 0.2em;
+      }
+      a:focus-visible {
+        outline: 2px solid currentColor;
+        outline-offset: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <header><a href="./index.html">Back to readme-flow-svg</a></header>
+    <main>
+      <h1>Privacy policy</h1>
+      <p>Last updated: October 15, 2026</p>
+      <p>
+        This policy covers the readme-flow-svg editor, SVG API, and MCP tools maintained by
+        <a href="https://github.com/infinuts/readme-flow-svg">infinuts on GitHub</a>. Copies hosted
+        by other people may handle data differently. The project has no accounts, advertising, or
+        analytics, and does not sell your data.
+      </p>
+
+      <h2>Editing in your browser</h2>
+      <p>
+        The editor renders previews and downloads SVGs in your browser. It saves your latest
+        workflow settings, including labels, in local storage under <code>readme-flow-config</code>.
+        Your page appearance preference is saved under <code>readme-flow-appearance</code>. These
+        values stay on your device until you replace them or clear the site's browser data. The app
+        does not use tracking cookies.
+      </p>
+      <p>
+        The hosted editor's stylesheet loads interface fonts from Google Fonts, so your browser
+        makes requests to Google even if you use a built-in font for your workflow. Those requests
+        include ordinary connection information, such as your IP address and browser headers.
+        Workflow labels are not added to these font requests by the app.
+      </p>
+
+      <h2>Hosted images, shared links, and API requests</h2>
+      <p>
+        Hosted image URLs and editor links contain your workflow settings in their query parameters,
+        including labels, titles, and connections. Anyone with a link can read those settings.
+        Opening a hosted link sends its URL to the host. Embedding an image in a README also lets
+        the image host or an image proxy fetch and cache it. Keep private information and secrets
+        out of shared workflows. Downloaded SVGs contain their labels too.
+      </p>
+      <p>
+        The <code>/generate</code> API and <code>generate_workflow</code> MCP tool receive the
+        workflow settings you submit and return an SVG and links. The <code>list_options</code> tool
+        returns supported settings without needing workflow content. The server does not save
+        workflows to a database or publish files to your repository. A client such as ChatGPT
+        handles the tool arguments and results under its own privacy policy; this service receives
+        the tool request, not your full conversation.
+      </p>
+
+      <h2>Optional Google Fonts for workflows</h2>
+      <p>
+        When you choose a Google Font for a workflow, the editor requests its family and weight from
+        our <code>/font</code> endpoint. The server fetches the font from
+        <code>fonts.googleapis.com</code> and <code>fonts.gstatic.com</code>. It sends the family
+        and weight to Google, without workflow text. API and MCP generation make the same font
+        requests when a Google Font is selected. Font files are cached in memory and used to turn
+        text into paths in the SVG.
+      </p>
+
+      <h2>Hosting, logs, and retention</h2>
+      <p>
+        Vercel hosts the public editor and API. The static editor is also available through GitHub
+        Pages. Hosting providers process connection data such as IP addresses, request times, URLs,
+        and browser headers to deliver and protect their services. Request URLs can include workflow
+        settings. Hosting logs and cached responses may outlast a request; the project does not
+        promise a fixed deletion period for records held by these providers. The SVG API allows
+        public caching, so clearing your browser data does not remove copies cached elsewhere.
+      </p>
+      <p>
+        See the privacy policies for <a href="https://vercel.com/legal/privacy-policy">Vercel</a>,
+        <a
+          href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement"
+          >GitHub</a
+        >, <a href="https://policies.google.com/privacy">Google</a>, and, if you use the ChatGPT
+        integration, <a href="https://openai.com/policies/privacy-policy/">OpenAI</a>.
+      </p>
+
+      <h2>Your choices and contacting us</h2>
+      <p>
+        Clear this site's browser data to remove saved settings. For workflows you want to keep off
+        the image service, use built-in workflow fonts and download the SVG for your repository. You
+        can open the editor locally; without a network connection, the interface uses fallback
+        fonts. Your MCP client may keep its own tool history, which you manage through that client's
+        settings.
+      </p>
+      <p>
+        For privacy questions or requests about data the project controls, contact the maintainer
+        through
+        <a href="https://github.com/infinuts/readme-flow-svg/security/advisories/new"
+          >GitHub's private reporting form</a
+        >. A GitHub account is required. Please do not put private workflow links or personal data
+        in public issues. We will review what we can access or remove; copies held by other services
+        need to be handled with those services.
+      </p>
+      <p>Changes to this policy will appear on this page with an updated date.</p>
+    </main>
+  </body>
+</html>

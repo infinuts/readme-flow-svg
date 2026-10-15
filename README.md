@@ -100,7 +100,7 @@ npm run build:api
 
 **Why not Mermaid or a GIF?** Mermaid is useful for text-maintained diagrams. This tool makes small animated workflows with a visual editor. SVG stays sharp when resized; GIF stores raster frames.
 
-**Is data sent to a server?** Editing and downloading are local. Hosted embeds send settings in the image URL. The optional font feature requests a family and weight. There are no accounts or analytics.
+**Is data sent to a server?** Editing and downloading run in your browser. Hosted embeds send settings in the image URL. The editor loads interface fonts from Google; optional workflow fonts go through our font endpoint. There are no accounts or analytics. Read the [privacy policy](./privacy.html) for browser storage, hosting logs, and contact details.
 
 ## Projects using it
 

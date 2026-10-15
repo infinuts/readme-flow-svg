@@ -9,6 +9,21 @@ import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { resolve } from 'node:path';
 
+function assertToolAnnotations(tools) {
+  for (const tool of tools) {
+    assert.deepEqual(
+      tool.annotations,
+      {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: tool.name === 'generate_workflow',
+      },
+      `${tool.name} must expose all four boolean hints`,
+    );
+  }
+}
+
 test('Vercel adapters preserve URL settings, request bodies and HTTP methods', async () => {
   const response = await svgRoute.fetch(
     new Request('https://example.com/api/svg?steps=Build;Test;Ship&traveler=rocket'),
@@ -135,6 +150,7 @@ test('MCP HTTP transport initializes, lists tools and generates SVGs', async () 
   );
   assert.equal(init.result.serverInfo.name, 'readme-flow-svg');
   const listed = await rpc('tools/list', {}, 2);
+  assertToolAnnotations(listed.result.tools);
   assert.deepEqual(listed.result.tools.map((t) => t.name).sort(), [
     'generate_workflow',
     'list_options',
@@ -161,6 +177,7 @@ test('official MCP client connects over stdio and rejects invalid input', async 
     await client.connect(transport);
     const tools = await client.listTools();
     assert.equal(tools.tools.length, 2);
+    assertToolAnnotations(tools.tools);
     const options = await client.callTool({ name: 'list_options', arguments: {} });
     assert.equal(Object.keys(options.structuredContent.presets).length, 9);
     const result = await client.callTool({
