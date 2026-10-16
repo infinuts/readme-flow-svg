@@ -860,6 +860,10 @@
     {
       repo: "infinuts/readme-flow-svg",
       description: "The workflow generator uses its own animated SVG in its README."
+    },
+    {
+      repo: "infinuts/port2browser",
+      description: "This project uses this animated SVG project to demonstrate how the ai skill works."
     }
   ];
 
