@@ -161,3 +161,68 @@ test('empty connections, paused workflows and reduced motion remain valid', () =
   assert.ok(svg.includes('animation-play-state:paused'));
   assert.ok(svg.includes('prefers-reduced-motion'));
 });
+
+test('diagonal cards use facing side ports without doubling back through the previous edge', () => {
+  const config = {
+    steps: ['Upload', 'Validate', 'Compress', 'Download'],
+    positions: [
+      { x: 82, y: 96 },
+      { x: 254, y: 250 },
+      { x: 426, y: 96 },
+      { x: 598, y: 96 },
+    ],
+    routing: 'elbow',
+  };
+  const paths = [...renderSvg(config).matchAll(/data-connection="[^"]+"><path d="([^"]+)"/g)].map(
+    (m) => m[1],
+  );
+  const g = workflowGeometry(config);
+  for (let i = 0; i < paths.length; i++) {
+    const points = [...paths[i].matchAll(/[ML](-?[\d.]+) (-?[\d.]+)/g)].map((m) => ({
+      x: +m[1],
+      y: +m[2],
+    }));
+    assert.deepEqual(points[0], { x: g.nodes[i].x + 60, y: g.nodes[i].y });
+    assert.deepEqual(points.at(-1), { x: g.nodes[i + 1].x - 60, y: g.nodes[i + 1].y });
+    assert.ok(points[1].x > points[0].x, 'leave toward the destination');
+    assert.ok(points.at(-1).x > points.at(-2).x, 'arrive from the facing side');
+  }
+});
+
+test('orthogonal routes avoid intervening cards in both directions and prefer few bends', () => {
+  for (const reverse of [false, true]) {
+    const config = {
+      steps: ['Start', 'Obstacle', 'Finish'],
+      positions: [
+        { x: 100, y: 150 },
+        { x: 300, y: 150 },
+        { x: 500, y: 150 },
+      ],
+      connectionMode: 'custom',
+      connections: [{ from: reverse ? 2 : 0, to: reverse ? 0 : 2 }],
+      routing: 'elbow',
+    };
+    const path = renderSvg(config).match(/data-connection="[^"]+"><path d="([^"]+)"/)[1];
+    const points = [...path.matchAll(/[ML](-?[\d.]+) (-?[\d.]+)/g)].map((m) => ({
+      x: +m[1],
+      y: +m[2],
+    }));
+    assert.ok(points.length <= 6, 'use at most four bends around a blocking card');
+    for (let i = 1; i < points.length; i++) {
+      const a = points[i - 1],
+        b = points[i];
+      assert.ok(a.x === b.x || a.y === b.y);
+      for (const node of workflowGeometry(config).nodes) {
+        assert.ok(
+          !(
+            Math.max(a.x, b.x) > node.x - 59 &&
+            Math.min(a.x, b.x) < node.x + 59 &&
+            Math.max(a.y, b.y) > node.y - 48 &&
+            Math.min(a.y, b.y) < node.y + 48
+          ),
+          'segment must not cross a card',
+        );
+      }
+    }
+  }
+});

@@ -35,7 +35,7 @@ function renderClassicSvg(raw={},paused=false) {
 }
 
 function curveBetween(a,b,c,g) {
-  const horizontal=a.y===b.y,sign=(horizontal?Math.sign(b.x-a.x):Math.sign(b.y-a.y))||1;
+  const horizontal=Math.abs(b.x-a.x)>=120&&(Math.abs(b.y-a.y)<98||Math.abs(b.x-a.x)>=Math.abs(b.y-a.y)),sign=(horizontal?Math.sign(b.x-a.x):Math.sign(b.y-a.y))||1;
   const start=horizontal?{x:a.x+sign*60,y:a.y}:{x:a.x,y:a.y+sign*49};
   const end=horizontal?{x:b.x-sign*60,y:b.y}:{x:b.x,y:b.y-sign*49};
   if(g.edges.some(e=>g.nodes[e.from]===b&&g.nodes[e.to]===a)){if(horizontal){start.y-=sign*12;end.y-=sign*12;}else{start.x+=sign*12;end.x+=sign*12;}}
@@ -48,22 +48,31 @@ function curveBetween(a,b,c,g) {
     const clear=(p,q)=>!g.nodes.some(node=>Math.max(p.x,q.x)>node.x-65&&Math.min(p.x,q.x)<node.x+65&&Math.max(p.y,q.y)>node.y-54&&Math.min(p.y,q.y)<node.y+54);
     const first=ys.indexOf(outerStart.y)*xs.length+xs.indexOf(outerStart.x),last=ys.indexOf(outerEnd.y)*xs.length+xs.indexOf(outerEnd.x);
     const point=id=>({x:xs[id%xs.length],y:ys[Math.floor(id/xs.length)]});
-    const cost=new Map([[first,0]]),previous=new Map(),open=[first],closed=new Set();
+    // Track the arrival axis: reaching a grid point with fewer bends can be
+    // better than reaching it at the same distance from another direction.
+    const axis=horizontal?0:1,initial=first*2+axis;
+    const cost=new Map([[initial,0]]),previous=new Map(),open=[initial],closed=new Set();
+    const estimate=id=>{const p=point(Math.floor(id/2));return cost.get(id)+Math.abs(p.x-outerEnd.x)+Math.abs(p.y-outerEnd.y);};
+    let goal;
     while(open.length){
-      open.sort((a,b)=>{const pa=point(a),pb=point(b);return cost.get(a)+Math.abs(pa.x-outerEnd.x)+Math.abs(pa.y-outerEnd.y)-cost.get(b)-Math.abs(pb.x-outerEnd.x)-Math.abs(pb.y-outerEnd.y);});
-      const current=open.shift();if(current===last)break;if(closed.has(current))continue;closed.add(current);
-      const x=current%xs.length,y=Math.floor(current/xs.length),p=point(current);
+      open.sort((a,b)=>estimate(a)-estimate(b));
+      const current=open.shift(),cell=Math.floor(current/2);
+      if(closed.has(current))continue;
+      if(cell===last){goal=current;break;}
+      closed.add(current);
+      const x=cell%xs.length,y=Math.floor(cell/xs.length),p=point(cell);
       for(const [nx,ny]of [[x-1,y],[x+1,y],[x,y-1],[x,y+1]]){
         if(nx<0||ny<0||nx>=xs.length||ny>=ys.length)continue;
-        const next=ny*xs.length+nx,q=point(next);if(!clear(p,q))continue;
-        const candidate=cost.get(current)+Math.abs(q.x-p.x)+Math.abs(q.y-p.y);
+        const nextCell=ny*xs.length+nx,q=point(nextCell),nextAxis=nx===x?1:0,next=nextCell*2+nextAxis;
+        if(!clear(p,q))continue;
+        const candidate=cost.get(current)+Math.abs(q.x-p.x)+Math.abs(q.y-p.y)+(current%2===nextAxis?0:24)+(nextCell===last&&nextAxis!==axis?24:0);
         if(candidate<(cost.get(next)??Infinity)){cost.set(next,candidate);previous.set(next,current);open.push(next);}
       }
     }
-    if(previous.has(last)||first===last){const route=[point(last)];let id=last;while(id!==first){id=previous.get(id);route.push(point(id));}points=[start,...route.reverse(),end];}
+    if(goal!==undefined){const route=[];let id=goal;while(id!==undefined){route.push(point(Math.floor(id/2)));id=previous.get(id);}points=[start,...route.reverse(),end];}
   }
   points=points.filter((p,i)=>i===0||p.x!==points[i-1].x||p.y!==points[i-1].y);
-  points=points.filter((p,i)=>!i||i===points.length-1||!((points[i-1].x===p.x&&p.x===points[i+1].x)||(points[i-1].y===p.y&&p.y===points[i+1].y)));
+  points=points.filter((p,i)=>!i||i===points.length-1||!((points[i-1].x===p.x&&p.x===points[i+1].x&&(p.y-points[i-1].y)*(points[i+1].y-p.y)>=0)||(points[i-1].y===p.y&&p.y===points[i+1].y&&(p.x-points[i-1].x)*(points[i+1].x-p.x)>=0)));
   let path=`M${start.x} ${start.y}`,samples=[start];
   const lerp=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t}),distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
   for(let i=1;i<points.length;i++){
