@@ -526,7 +526,7 @@
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="204" viewBox="0 0 ${width} 204" role="img" aria-labelledby="title desc"><title id="title">${escapeXml(c.steps.join(" \u2192 "))}</title><desc id="desc">An animated ${escapeXml(PRESETS[c.preset].name.toLowerCase())} workflow with ${n} steps.</desc><style>text{font-family:${font}}.animated{animation-duration:${c.duration}s;animation-timing-function:linear;animation-iteration-count:infinite;animation-play-state:${paused2 ? "paused" : "running"}}.traveler{animation-name:travel;animation-timing-function:cubic-bezier(.45,0,.2,1)}.dot-halo{animation-name:dotPulse;animation-duration:1.6s;animation-timing-function:ease-out}@keyframes travel{${motion}}@keyframes dotPulse{0%{r:7;opacity:.22}100%{r:13;opacity:0}}@media(prefers-reduced-motion:reduce){.animated{animation:none}}</style><rect width="${width}" height="204" rx="16" fill="${t.background}"/><path d="M${x0} ${y}H${x0 + (n - 1) * gap}" stroke="${t.line}" stroke-width="1.5"/>${connectors}${nodes}<g class="traveler animated" data-element="${c.traveler}">${traveler}</g></svg>`;
   }
   function curveBetween(a, b, c, g) {
-    const horizontal = a.y === b.y, sign = (horizontal ? Math.sign(b.x - a.x) : Math.sign(b.y - a.y)) || 1;
+    const horizontal = Math.abs(b.x - a.x) >= 120 && (Math.abs(b.y - a.y) < 98 || Math.abs(b.x - a.x) >= Math.abs(b.y - a.y)), sign = (horizontal ? Math.sign(b.x - a.x) : Math.sign(b.y - a.y)) || 1;
     const start = horizontal ? { x: a.x + sign * 60, y: a.y } : { x: a.x, y: a.y + sign * 49 };
     const end = horizontal ? { x: b.x - sign * 60, y: b.y } : { x: b.x, y: b.y - sign * 49 };
     if (g.edges.some((e) => g.nodes[e.from] === b && g.nodes[e.to] === a)) {
@@ -547,22 +547,28 @@
       const clear = (p, q) => !g.nodes.some((node) => Math.max(p.x, q.x) > node.x - 65 && Math.min(p.x, q.x) < node.x + 65 && Math.max(p.y, q.y) > node.y - 54 && Math.min(p.y, q.y) < node.y + 54);
       const first = ys.indexOf(outerStart.y) * xs.length + xs.indexOf(outerStart.x), last = ys.indexOf(outerEnd.y) * xs.length + xs.indexOf(outerEnd.x);
       const point = (id) => ({ x: xs[id % xs.length], y: ys[Math.floor(id / xs.length)] });
-      const cost = /* @__PURE__ */ new Map([[first, 0]]), previous = /* @__PURE__ */ new Map(), open = [first], closed = /* @__PURE__ */ new Set();
+      const axis = horizontal ? 0 : 1, initial = first * 2 + axis;
+      const cost = /* @__PURE__ */ new Map([[initial, 0]]), previous = /* @__PURE__ */ new Map(), open = [initial], closed = /* @__PURE__ */ new Set();
+      const estimate = (id) => {
+        const p = point(Math.floor(id / 2));
+        return cost.get(id) + Math.abs(p.x - outerEnd.x) + Math.abs(p.y - outerEnd.y);
+      };
+      let goal;
       while (open.length) {
-        open.sort((a2, b2) => {
-          const pa = point(a2), pb = point(b2);
-          return cost.get(a2) + Math.abs(pa.x - outerEnd.x) + Math.abs(pa.y - outerEnd.y) - cost.get(b2) - Math.abs(pb.x - outerEnd.x) - Math.abs(pb.y - outerEnd.y);
-        });
-        const current = open.shift();
-        if (current === last) break;
+        open.sort((a2, b2) => estimate(a2) - estimate(b2));
+        const current = open.shift(), cell = Math.floor(current / 2);
         if (closed.has(current)) continue;
+        if (cell === last) {
+          goal = current;
+          break;
+        }
         closed.add(current);
-        const x = current % xs.length, y = Math.floor(current / xs.length), p = point(current);
+        const x = cell % xs.length, y = Math.floor(cell / xs.length), p = point(cell);
         for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
           if (nx < 0 || ny < 0 || nx >= xs.length || ny >= ys.length) continue;
-          const next = ny * xs.length + nx, q = point(next);
+          const nextCell = ny * xs.length + nx, q = point(nextCell), nextAxis = nx === x ? 1 : 0, next = nextCell * 2 + nextAxis;
           if (!clear(p, q)) continue;
-          const candidate = cost.get(current) + Math.abs(q.x - p.x) + Math.abs(q.y - p.y);
+          const candidate = cost.get(current) + Math.abs(q.x - p.x) + Math.abs(q.y - p.y) + (current % 2 === nextAxis ? 0 : 24) + (nextCell === last && nextAxis !== axis ? 24 : 0);
           if (candidate < (cost.get(next) ?? Infinity)) {
             cost.set(next, candidate);
             previous.set(next, current);
@@ -570,18 +576,18 @@
           }
         }
       }
-      if (previous.has(last) || first === last) {
-        const route = [point(last)];
-        let id = last;
-        while (id !== first) {
+      if (goal !== void 0) {
+        const route = [];
+        let id = goal;
+        while (id !== void 0) {
+          route.push(point(Math.floor(id / 2)));
           id = previous.get(id);
-          route.push(point(id));
         }
         points = [start, ...route.reverse(), end];
       }
     }
     points = points.filter((p, i) => i === 0 || p.x !== points[i - 1].x || p.y !== points[i - 1].y);
-    points = points.filter((p, i) => !i || i === points.length - 1 || !(points[i - 1].x === p.x && p.x === points[i + 1].x || points[i - 1].y === p.y && p.y === points[i + 1].y));
+    points = points.filter((p, i) => !i || i === points.length - 1 || !(points[i - 1].x === p.x && p.x === points[i + 1].x && (p.y - points[i - 1].y) * (points[i + 1].y - p.y) >= 0 || points[i - 1].y === p.y && p.y === points[i + 1].y && (p.x - points[i - 1].x) * (points[i + 1].x - p.x) >= 0));
     let path = `M${start.x} ${start.y}`, samples = [start];
     const lerp = (a2, b2, t) => ({ x: a2.x + (b2.x - a2.x) * t, y: a2.y + (b2.y - a2.y) * t }), distance = (a2, b2) => Math.hypot(a2.x - b2.x, a2.y - b2.y);
     for (let i = 1; i < points.length; i++) {

@@ -4,8 +4,8 @@
 
 Animated SVG workflows for GitHub READMEs, made in your browser.
 
-[![MIT license](https://img.shields.io/github/license/infinuts/readme-flow-svg)](./LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/infinuts/readme-flow-svg?style=flat)](https://github.com/infinuts/readme-flow-svg/stargazers)
+[![MIT license](./assets/badges/license.svg)](./LICENSE)
+[![GitHub stars](./assets/badges/stars.svg)](https://github.com/infinuts/readme-flow-svg/stargazers)
 [![CI](https://github.com/infinuts/readme-flow-svg/actions/workflows/ci.yml/badge.svg)](https://github.com/infinuts/readme-flow-svg/actions/workflows/ci.yml)
 [![Pages deploy](https://github.com/infinuts/readme-flow-svg/actions/workflows/pages.yml/badge.svg)](https://github.com/infinuts/readme-flow-svg/actions/workflows/pages.yml)
 
