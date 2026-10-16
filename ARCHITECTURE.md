@@ -11,12 +11,20 @@ Editor controls → normalizeConfig → renderSvg → preview / download
 HTTP query → parseWorkflowParams → shared renderer → image/svg+xml
 ```
 
-- `src/svg.js` owns presets, icons, palettes, normalization, geometry, escaping,
-  and SVG rendering. The output embeds CSS, icons, and reduced-motion rules.
+- `src/options.js` owns presets, icons, and palette definitions. `src/config.js`
+  normalizes untrusted input and computes geometry. Manual layouts always have
+  complete positions and a canvas that contains every card.
+- `src/svg.js` re-exports the shared configuration interface and renders SVGs.
+  It caches up to eight sets of connection routes by geometry, routing, and edge
+  endpoints. Labels, appearance, and timing changes reuse those routes. The
+  output embeds CSS, icons, scoped accessibility IDs, and reduced-motion rules.
 - `src/links.js` owns public service URLs and the existing query format. Both the
   editor and HTTP handler use it. Do not introduce a second URL encoder.
 - `src/app.js` owns controls, preview interaction, local storage, and export.
   Page-only accessibility attributes are applied after rendering the preview.
+- `src/editor-state.js` owns bounded undo history, arrangement, and JSON imports.
+  The editor batches preview updates per animation frame and creates the custom
+  theme preview only while its dialog is open.
 - `src/appearance.js` resolves system/manual page appearance before CSS loads.
   It does not modify workflow settings or SVG palettes.
 - `src/markdown.js` handles custom Markdown alt text without touching image URLs.
@@ -38,11 +46,18 @@ community table, and copies the site into `dist/`. Commit generated `src/browser
 and SVG assets alongside source changes. `npm run build:api` verifies a separate
 server bundle; it never replaces the static editor.
 
-ESLint checks JavaScript across the repo. TypeScript checks `appearance.js` and
-`markdown.js` with strict JavaScript checking; legacy renderer/API modules are
-covered by regression tests, not a claimed full type migration. Expand this scope
-as modules acquire explicit types. Prettier excludes the protected renderer and
+ESLint checks JavaScript across the repo. TypeScript checks `appearance.js`,
+`markdown.js`, `config.js`, `links.js`, and `editor-state.js` with strict JavaScript
+checking, including normalization, geometry, and URL parsing. The renderer, DOM
+editor, and API still rely on regression tests. Playwright covers HTTP and
+`file://` editing, history, layout actions, font failures, accessibility IDs, and
+SVG/JSON exports. Representative SVG fixtures protect output changes. Prettier excludes the renderer and
 URL module, generated assets, and synchronized skill copies.
+
+The `/generate` handler enforces its 16 KB body limit while reading bytes and
+cancels oversized input. Declared oversized `Content-Length` values are rejected
+before any reads. Bodies with no length or an incorrect small length are still
+bounded by the stream reader.
 
 Keep exports self-contained: escaped text, supported icons, hex colors, no scripts,
 external assets, or `foreignObject`. URL schema and renderer changes need explicit

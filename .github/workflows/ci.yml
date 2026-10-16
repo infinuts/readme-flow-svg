@@ -21,5 +21,7 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npm run build:api
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
       - name: Verify generated assets are committed
         run: git diff --exit-code -- src/browser.js src/font-engine.js assets/gallery examples README.md

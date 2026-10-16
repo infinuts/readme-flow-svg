@@ -1537,6 +1537,9 @@ pre {
   touch-action: none;
   user-select: none;
 }
+#preview .traveler {
+  pointer-events: none;
+}
 #preview.dragging,
 #preview.dragging [data-step] {
   cursor: grabbing;
@@ -1549,6 +1552,28 @@ pre {
   padding: 0;
   font-size: 9px;
   text-decoration: underline;
+}
+.layout-tools {
+  margin-block: 12px 20px;
+  font-size: 12px;
+}
+.layout-tools summary {
+  cursor: pointer;
+}
+.layout-actions,
+.workflow-files {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin-top: 12px;
+}
+.layout-actions .text-button,
+.workflow-files .text-button {
+  font-size: 12px;
+}
+.workflow-files .field-hint {
+  flex-basis: 100%;
 }
 .field-hint a {
   text-decoration: underline;

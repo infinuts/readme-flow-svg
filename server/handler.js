@@ -16,6 +16,34 @@ const json = (value, status = 200) =>
     status,
     headers: { ...cors, 'Content-Type': 'application/json; charset=utf-8' },
   });
+const maxBodyBytes = 16384;
+class BodyTooLarge extends Error {}
+async function readBody(request) {
+  const length = request.headers.get('Content-Length');
+  if (length && /^\d+$/.test(length) && Number(length) > maxBodyBytes) {
+    void request.body?.cancel().catch(() => {});
+    throw new BodyTooLarge();
+  }
+  if (!request.body) return '';
+  const reader = request.body.getReader(),
+    decoder = new TextDecoder();
+  let size = 0,
+    body = '';
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) return body + decoder.decode();
+      size += value.byteLength;
+      if (size > maxBodyBytes) {
+        void reader.cancel().catch(() => {});
+        throw new BodyTooLarge();
+      }
+      body += decoder.decode(value, { stream: true });
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
 export function route(path) {
   return {
     fetch(request) {
@@ -87,16 +115,16 @@ const handler = {
       }
     }
     if (url.pathname === '/generate' && request.method === 'POST') {
-      const body = await request.text();
-      if (new TextEncoder().encode(body).length > 16384)
-        return json({ error: 'Request is too large.' }, 413);
       try {
+        const body = await readBody(request);
         return json(await generateWorkflowAsync(JSON.parse(body)));
       } catch (error) {
+        if (error instanceof BodyTooLarge) return json({ error: 'Request is too large.' }, 413);
+        const message = error instanceof Error ? error.message : '';
         return json(
           {
-            error: error.message.startsWith('Google')
-              ? error.message
+            error: message.startsWith('Google')
+              ? message
               : 'Invalid workflow configuration or font could not be loaded.',
           },
           400,

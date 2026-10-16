@@ -9,6 +9,48 @@ import {
   THEMES,
   TRAVELERS,
 } from '../src/svg.js';
+import { readFile } from 'node:fs/promises';
+
+test('SVG output matches reviewed classic and routed snapshots', async () => {
+  for (const [name, config] of [
+    ['classic', {}],
+    ['routed', { preset: 'review', title: 'Review & release', theme: 'github' }],
+  ])
+    assert.equal(
+      renderSvg(config) + '\n',
+      (await readFile(new URL(`./fixtures/${name}.svg`, import.meta.url), 'utf8')).replace(
+        /\r\n/g,
+        '\n',
+      ),
+    );
+});
+
+test('inline SVGs have scoped accessible names, including identical configurations', () => {
+  for (const config of [{}, { preset: 'release' }]) {
+    const one = renderSvg(config, false, 'main'),
+      two = renderSvg(config, false, 'dialog');
+    const ids = (svg) => [...svg.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]);
+    assert.equal(new Set([...ids(one), ...ids(two)]).size, 4);
+    for (const svg of [one, two]) {
+      const references = svg.match(/aria-labelledby="([^"]+)"/)[1].split(' ');
+      assert.deepEqual(references, ids(svg));
+    }
+  }
+  assert.ok(!renderSvg({}, false, '"><script>').includes('<script>'));
+});
+
+test('long card labels wrap in two escaped text lines and keep short labels stable', () => {
+  const label = 'Review pull request changes';
+  for (const layout of ['horizontal', 'grid']) {
+    const svg = renderSvg({ steps: [label, 'Test', 'A'.repeat(32)], layout });
+    const firstCard = svg.match(/<g data-step="0">([\s\S]*?)<\/g><text[\s\S]*?<\/g>/)?.[0] || svg;
+    assert.ok(firstCard.includes('Review pull'));
+    assert.ok(svg.includes('request changes'));
+    assert.ok(!svg.includes('textLength='));
+    assert.ok(!svg.includes('NaN'));
+    assert.ok(svg.includes('>Test</text>'));
+  }
+});
 test('untrusted labels are XML-escaped and cannot inject markup', () => {
   const svg = renderSvg({ steps: ['<script>alert(1)</script>', '" & >', 'Download'] });
   assert.ok(!svg.includes('<script>'));

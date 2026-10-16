@@ -3,6 +3,8 @@ dist/
 .qa/
 .api-build/
 .vercel/
+playwright-report/
+test-results/
 src/browser.js
 src/font-engine.js
 src/svg.js

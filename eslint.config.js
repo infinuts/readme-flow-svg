@@ -11,6 +11,8 @@ export default [
       'src/browser.js',
       'src/font-engine.js',
       '.vercel/**',
+      'playwright-report/**',
+      'test-results/**',
     ],
   },
   js.configs.recommended,

@@ -6,6 +6,8 @@
     "dev": "node scripts/serve.mjs",
     "build": "node scripts/build.mjs",
     "test": "node scripts/sync-skills.mjs --check && node --test tests/*.test.mjs",
+    "test:browser": "playwright test",
+    "benchmark": "node scripts/benchmark.mjs",
     "sync:skills": "node scripts/sync-skills.mjs",
     "build:api": "node scripts/build-api.mjs",
     "mcp": "node mcp/stdio.mjs",
@@ -22,6 +24,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.64.1",
     "esbuild": "^0.28.2",
     "eslint": "^10.12.0",
     "globals": "^17.13.0",

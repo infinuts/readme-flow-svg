@@ -80,6 +80,25 @@ npm ci
 npm test
 ```
 
+Browser regressions run against the built static editor and also open the checked-in
+`index.html` with `file://`. They block external requests and exercise editing, history,
+font failure/retry, accessibility IDs, and actual SVG/JSON downloads:
+
+```sh
+npx playwright install chromium
+npm run test:browser
+npm run benchmark
+```
+
+`test:browser` builds and starts its own local server unless one is already running
+on port 4173. The benchmark prints median and p95 renderer times for 12 steps and
+24 connections, separating changed positions from appearance edits. Timings depend
+on the machine. Unit tests use a broad timeout to catch severe rendering regressions.
+
+`tests/fixtures/classic.svg` and `tests/fixtures/routed.svg` are reviewed snapshots.
+Update them deliberately when the renderer's output changes, then inspect the SVGs
+and run the browser and unit suites.
+
 ### Generated browser scripts
 
 The two checked-in browser bundles keep the editor working when `index.html` is opened

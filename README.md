@@ -39,14 +39,29 @@ The editor runs entirely in your browser, including SVG downloads. Hosted images
 
 - Three to twelve steps, with stage icons, titles, and subtitles.
 - Horizontal, vertical, snake, and grid layouts; drag cards or move them with the keyboard.
+- Undo/redo, alignment, distribution, canvas fitting, and layout reset.
 - Labeled branches, merges, loops, and configurable connection styles.
 - Six SVG palettes, custom colors, and eight moving elements.
 - Self-contained SVGs with CSS animation and reduced-motion support.
 - Hosted embeds, local downloads, editable links, and Markdown alt text.
+- JSON import/export for reusable workflows, and light/dark README picture snippets.
+- Plain images or links to your documentation, this workflow's editor, or the project repository.
 - A responsive editor with system, light, and dark page appearance.
 - REST and MCP interfaces using the same renderer as the editor.
 
 Page appearance is independent of SVG appearance. Animation follows connection order; it does not simulate concurrent execution.
+
+Use **Export JSON** to save `workflow.json` alongside `workflow.svg`. **Import JSON** restores
+the steps, icons, connections, manual positions, colors, and font settings. Files stay in your
+browser; imports accept workflow configurations up to 16 KB. You can undo an import or reset.
+
+The preview supports Ctrl/Cmd+Z and Ctrl/Cmd+Shift+Z (or Ctrl+Y). Text fields keep their native
+undo behavior. **Arrange cards** aligns or distributes all cards; alignment separates cards
+along the other axis to prevent overlap. **Fit canvas to cards** trims excess space, and
+**Reset positions** returns to the selected automatic layout.
+
+**Light / dark README** generates a `<picture>` snippet using the built-in Light and Dark
+palettes. It keeps the same labels, layout, connections, and font in both versions.
 
 ## URL parameters
 
@@ -84,6 +99,9 @@ npm run format:check
 npm test
 npm run build
 npm run build:api
+npx playwright install chromium
+npm run test:browser
+npm run benchmark
 ```
 
 [Development, deployment, and AI/MCP setup](./docs/DEVELOPMENT.md) · [Architecture](./ARCHITECTURE.md)

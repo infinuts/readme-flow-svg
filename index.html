@@ -328,6 +328,24 @@
               </h3>
               <div class="preview-tools">
                 <button
+                  id="undo"
+                  class="icon-button"
+                  title="Undo (Ctrl+Z)"
+                  aria-label="Undo"
+                  disabled
+                >
+                  ↶
+                </button>
+                <button
+                  id="redo"
+                  class="icon-button"
+                  title="Redo (Ctrl+Shift+Z)"
+                  aria-label="Redo"
+                  disabled
+                >
+                  ↷
+                </button>
+                <button
                   id="pause"
                   class="icon-button"
                   title="Pause animation"
@@ -359,14 +377,50 @@
               <span data-icon="grip"></span>Grab a card to move it.
               <button id="reset-positions" class="text-button" disabled>Reset positions</button>
             </div>
+            <details class="layout-tools">
+              <summary>Arrange cards</summary>
+              <div class="layout-actions">
+                <button class="text-button" data-arrange="align-y">Align horizontally</button>
+                <button class="text-button" data-arrange="align-x">Align vertically</button>
+                <button class="text-button" data-arrange="distribute-x">
+                  Distribute horizontally
+                </button>
+                <button class="text-button" data-arrange="distribute-y">
+                  Distribute vertically
+                </button>
+                <button class="text-button" data-arrange="fit">Fit canvas to cards</button>
+              </div>
+            </details>
             <div class="embed-panel">
               <div class="embed-heading">
                 <h3>Ready for your README</h3>
                 <select id="embed-mode" aria-label="Image embed mode">
                   <option value="hosted">Hosted image</option>
                   <option value="local">File in your repo</option>
+                  <option value="adaptive">Light / dark README</option>
                 </select>
               </div>
+              <label class="control-field" for="embed-link"
+                >Image link
+                <select id="embed-link">
+                  <option value="none">Plain image</option>
+                  <option value="editor">Open this workflow in the editor</option>
+                  <option value="custom">My documentation</option>
+                  <option value="repository">Project repository</option>
+                </select>
+              </label>
+              <label id="embed-link-field" class="control-field" for="embed-link-url" hidden
+                >Documentation URL
+                <input
+                  id="embed-link-url"
+                  type="url"
+                  placeholder="https://example.com/docs"
+                  maxlength="2048"
+                />
+                <span class="field-hint"
+                  >Use an http or https URL. Leave blank for a plain image.</span
+                >
+              </label>
               <label class="control-field" for="alt-text"
                 >Image description (alt text)<input
                   id="alt-text"
@@ -412,6 +466,12 @@
               <p id="embed-hint" class="embed-hint">
                 Paste this line in your README. The image is generated from your settings.
               </p>
+            </div>
+            <div class="workflow-files" role="group" aria-label="Editable workflow files">
+              <button id="export-json" class="text-button">Export JSON</button>
+              <button id="import-json" class="text-button">Import JSON</button>
+              <input id="workflow-file" type="file" accept=".json,application/json" hidden />
+              <span class="field-hint">Save an editable copy alongside your SVG.</span>
             </div>
             <div class="export-actions">
               <button id="download" class="button secondary">

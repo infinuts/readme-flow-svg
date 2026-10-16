@@ -1,4 +1,5 @@
 import { withAltText } from './markdown.js';
+import { createHistory, positionedConfig, arrangeCards, importWorkflow } from './editor-state.js';
 import {
   ICONS,
   PRESETS,
@@ -34,10 +35,10 @@ let config = normalizeConfig(),
 const fontCache = new Map();
 let fontTimer,
   drag = null,
-  dragFrame;
+  renderFrame;
 const fontKey = () => config.googleFont + ':' + config.fontWeight;
-function currentSvg(settings = config, isPaused = false) {
-  const svg = renderSvg(settings, isPaused),
+function currentSvg(settings = config, isPaused = false, scope = 'workflow') {
+  const svg = renderSvg(settings, isPaused, scope),
     entry = fontCache.get(settings.googleFont + ':' + settings.fontWeight);
   return settings.font === 'google' && entry?.font
     ? fontEngine.outlineSvg(svg, entry.font, settings.googleFont)
@@ -48,15 +49,18 @@ function updateFont() {
   const key = fontKey(),
     entry = fontCache.get(key),
     ready = config.font !== 'google' || !!entry?.font;
-  for (const id of ['download', 'copy-markdown', 'copy-code']) $(id).disabled = !ready;
+  $('download').disabled = !ready;
+  $('copy-code').disabled = activeTab === 'svg' && !ready;
   const message =
     config.font !== 'google'
       ? ''
       : entry?.font
         ? 'Font ready. Included in your SVG.'
-        : entry?.error || 'Loading Google Font…';
+        : entry?.error
+          ? entry.error + ' Retry to download the SVG. Hosted Markdown is available.'
+          : 'Loading Google Font… Hosted Markdown is available.';
   if ($('font-status').textContent !== message) $('font-status').textContent = message;
-  $('retry-font').hidden = !entry?.error;
+  $('retry-font').hidden = config.font !== 'google' || !entry?.error;
   clearTimeout(fontTimer);
   if (config.font !== 'google' || entry) return;
   fontTimer = setTimeout(async () => {
@@ -89,6 +93,7 @@ try {
 } catch {
   toast('Could not load saved settings. Starting with a fresh workflow.');
 }
+const history = createHistory(config);
 function toast(message) {
   $('toast').textContent = message;
   $('toast').classList.add('visible');
@@ -96,16 +101,28 @@ function toast(message) {
   toastTimer = setTimeout(() => $('toast').classList.remove('visible'), 3500);
 }
 function markdown() {
-  const output = workflowMarkdown(config, $('embed-mode').value === 'local');
+  const output = workflowMarkdown(config, $('embed-mode').value === 'local', {
+    link: $('embed-link').value,
+    href: $('embed-link-url').value,
+    adaptive: $('embed-mode').value === 'adaptive',
+    alt: $('alt-text').value,
+  });
   return withAltText(output, $('alt-text').value);
 }
 $('alt-text').addEventListener('input', updateCode);
+$('embed-link-url').addEventListener('input', updateCode);
+$('embed-link').addEventListener('change', () => {
+  $('embed-link-field').hidden = $('embed-link').value !== 'custom';
+  updateCode();
+});
 $('embed-mode').addEventListener('change', () => {
   updateCode();
   $('embed-hint').innerHTML =
     $('embed-mode').value === 'local'
       ? 'Add <code>workflow.svg</code> to your repo, then paste this line in your README.'
-      : 'Paste this line in your README. The image is generated from your settings.';
+      : $('embed-mode').value === 'adaptive'
+        ? 'Paste this snippet in your README. It uses the Light and Dark palettes for the reader’s color scheme.'
+        : 'Paste this line in your README. The image is generated from your settings.';
 });
 function updateCode() {
   $('code').textContent = activeTab === 'markdown' ? markdown() : currentSvg();
@@ -115,7 +132,32 @@ function updateCode() {
   );
 }
 function render() {
-  $('preview').innerHTML = currentSvg(config, paused);
+  if (!drag) {
+    const input = document.activeElement;
+    history.record(config, input?.matches('input, textarea') ? input : null);
+  }
+  $('undo').disabled = !history.canUndo;
+  $('redo').disabled = !history.canRedo;
+  if (!renderFrame) renderFrame = requestAnimationFrame(flushRender);
+}
+function flushRender() {
+  cancelAnimationFrame(renderFrame);
+  renderFrame = null;
+  renderNow();
+}
+function renderThemePreview() {
+  if ($('custom-theme-picker').open)
+    $('custom-theme-preview').innerHTML = currentSvg(
+      { ...config, theme: 'custom' },
+      paused,
+      'theme-preview',
+    );
+}
+$('custom-theme-picker').addEventListener('close', () =>
+  $('custom-theme-preview').replaceChildren(),
+);
+function renderNow() {
+  $('preview').innerHTML = currentSvg(config, paused, 'preview');
   $('preview').querySelector('svg').setAttribute('role', 'group');
   $('preview').style.setProperty(
     '--svg-width',
@@ -127,7 +169,7 @@ function render() {
   canvas.style.backgroundColor = palette.background;
   canvas.style.backgroundImage = `radial-gradient(${palette.line} .8px,transparent .8px)`;
   canvas.style.setProperty('--canvas-meta', palette.muted);
-  $('custom-theme-preview').innerHTML = currentSvg({ ...config, theme: 'custom' }, paused);
+  renderThemePreview();
   $('workflow-name').textContent = config.title || PRESETS[config.preset].name + ' workflow';
   $('preview-meta').textContent = `${config.steps.length} steps · ${config.duration}s loop`;
   $('step-count').textContent = `${config.steps.length} / 12`;
@@ -147,7 +189,7 @@ function render() {
     card.setAttribute('role', 'button');
     card.setAttribute(
       'aria-label',
-      `${card.textContent.trim() || config.steps[Number(card.dataset.step)]}. Use arrow keys to move this card.`,
+      `${config.steps[Number(card.dataset.step)]}. Use arrow keys to move this card.`,
     );
   }
   try {
@@ -293,7 +335,7 @@ $('add-step').addEventListener('click', () => {
   if (config.positions.length) {
     const p = config.positions.at(-1) || { x: 100, y: 100 };
     config.positions.push({ x: p.x, y: Math.min(2100, p.y + 150) });
-    config.canvasSize.height = Math.min(2200, Math.max(config.canvasSize.height, p.y + 220));
+    config = normalizeConfig(config);
   }
   renderSteps();
   renderConnections();
@@ -320,7 +362,10 @@ document.querySelectorAll('[data-theme]').forEach((b) =>
   b.addEventListener('click', () => {
     config.theme = b.dataset.theme;
     syncControls();
-    if (config.theme === 'custom') $('custom-theme-picker').showModal();
+    if (config.theme === 'custom') {
+      $('custom-theme-picker').showModal();
+      renderThemePreview();
+    }
   }),
 );
 for (const [key, label] of Object.entries(THEME_FIELDS)) {
@@ -394,6 +439,7 @@ function selectTab(tab) {
     $(t + '-tab').tabIndex = t === tab ? 0 : -1;
   }
   updateCode();
+  updateFont();
 }
 for (const tab of ['markdown', 'svg']) {
   $(tab + '-tab').addEventListener('click', () => selectTab(tab));
@@ -459,17 +505,42 @@ $('copy-markdown').addEventListener('click', () =>
 $('copy-code').addEventListener('click', () =>
   copy(activeTab === 'markdown' ? markdown() : currentSvg(), 'Code copied to clipboard.'),
 );
-$('download').addEventListener('click', () => {
-  const blob = new Blob([currentSvg()], { type: 'image/svg+xml;charset=utf-8' }),
+function downloadFile(content, type, filename) {
+  const blob = new Blob([content], { type }),
     url = URL.createObjectURL(blob),
     a = document.createElement('a');
   a.href = url;
-  a.download = 'workflow.svg';
+  a.download = filename;
   document.body.append(a);
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+$('download').addEventListener('click', () => {
+  downloadFile(currentSvg(), 'image/svg+xml;charset=utf-8', 'workflow.svg');
   toast('SVG downloaded.');
+});
+$('export-json').addEventListener('click', () => {
+  downloadFile(
+    JSON.stringify(normalizeConfig(config), null, 2) + '\n',
+    'application/json',
+    'workflow.json',
+  );
+  toast('Workflow JSON downloaded. Import it to edit this workflow later.');
+});
+$('import-json').addEventListener('click', () => $('workflow-file').click());
+$('workflow-file').addEventListener('change', async (event) => {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+  try {
+    if (file.size > 16384) throw Error('Workflow JSON must be 16 KB or smaller.');
+    config = importWorkflow(await file.text());
+    syncControls();
+    toast('Workflow imported.');
+  } catch (error) {
+    toast(error instanceof SyntaxError ? 'Could not read this JSON file.' : error.message);
+  }
 });
 $('share').addEventListener('click', () => {
   const url = new URL(location.protocol === 'file:' ? EDITOR_URL : location.href);
@@ -659,20 +730,28 @@ $('retry-font').addEventListener('click', () => {
   render();
 });
 function capturePositions() {
-  if (config.positions.length) return;
+  if (config.positions.length) {
+    config = positionedConfig(config);
+    return;
+  }
   const svg = $('preview').querySelector('svg');
-  config.positions = [...svg.querySelectorAll('[data-step]')].map((card) => {
-    const b = card.querySelector('.stage').getBBox();
-    return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+  config = normalizeConfig({
+    ...config,
+    positions: [...svg.querySelectorAll('[data-step]')].map((card) => {
+      const b = card.querySelector('.stage').getBBox();
+      return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+    }),
+    canvasSize: {
+      width: svg.viewBox.baseVal.width,
+      height: Math.max(420, svg.viewBox.baseVal.height),
+    },
   });
-  const box = svg.viewBox.baseVal;
-  config.canvasSize = { width: box.width, height: Math.max(420, box.height) };
 }
 function moveCard(index, x, y) {
-  const header = workflowGeometry(config).header;
+  const geometry = workflowGeometry(config);
   config.positions[index] = {
-    x: Math.round(Math.max(70, Math.min(config.canvasSize.width - 70, x))),
-    y: Math.round(Math.max(header + 60, Math.min(config.canvasSize.height - 70, y))),
+    x: Math.round(Math.max(70, Math.min(geometry.width - 80, x))),
+    y: Math.round(Math.max(geometry.header + 60, Math.min(geometry.height - 70, y))),
   };
 }
 $('preview').addEventListener('pointerdown', (event) => {
@@ -701,16 +780,10 @@ $('preview').addEventListener('pointermove', (event) => {
     $('preview').querySelector('svg').getScreenCTM().inverse(),
   );
   moveCard(drag.index, point.x - drag.dx, point.y - drag.dy);
-  if (!dragFrame)
-    dragFrame = requestAnimationFrame(() => {
-      dragFrame = null;
-      render();
-    });
+  render();
 });
 function finishDrag(event) {
   if (!drag || event.pointerId !== drag.pointer) return;
-  cancelAnimationFrame(dragFrame);
-  dragFrame = null;
   drag = null;
   $('preview').classList.remove('dragging');
   render();
@@ -731,6 +804,7 @@ $('preview').addEventListener('keydown', (event) => {
     p.y + (event.key === 'ArrowUp' ? -amount : event.key === 'ArrowDown' ? amount : 0),
   );
   render();
+  flushRender();
   $('preview').querySelector(`[data-step="${index}"]`).focus();
 });
 $('reset-positions').addEventListener('click', () => {
@@ -738,6 +812,32 @@ $('reset-positions').addEventListener('click', () => {
   config.canvasSize = null;
   render();
   toast('Cards returned to the selected layout.');
+});
+for (const button of document.querySelectorAll('[data-arrange]'))
+  button.addEventListener('click', () => {
+    config = arrangeCards(config, button.dataset.arrange);
+    render();
+  });
+function restoreHistory(direction) {
+  if (drag) return;
+  const restored = history[direction]();
+  if (!restored) return;
+  config = restored;
+  syncControls();
+}
+$('undo').addEventListener('click', () => restoreHistory('undo'));
+$('redo').addEventListener('click', () => restoreHistory('redo'));
+document.addEventListener('keydown', (event) => {
+  if (
+    !(event.ctrlKey || event.metaKey) ||
+    event.altKey ||
+    event.target.closest('input, textarea, select, [contenteditable="true"]')
+  )
+    return;
+  if (event.key.toLowerCase() === 'z' || event.key.toLowerCase() === 'y') {
+    event.preventDefault();
+    restoreHistory(event.shiftKey || event.key.toLowerCase() === 'y' ? 'redo' : 'undo');
+  }
 });
 selectTab('markdown');
 syncControls();

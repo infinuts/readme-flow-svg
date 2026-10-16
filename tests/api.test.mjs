@@ -24,6 +24,101 @@ function assertToolAnnotations(tools) {
   }
 }
 
+test('generation enforces the byte limit during streamed reads and cancels excess input', async () => {
+  let cancelled = false,
+    reads = 0;
+  const stream = new ReadableStream(
+    {
+      pull(controller) {
+        reads++;
+        controller.enqueue(new Uint8Array(8192));
+      },
+      cancel() {
+        cancelled = true;
+      },
+    },
+    { highWaterMark: 0 },
+  );
+  const response = await worker.fetch(
+    new Request('https://example.com/generate', {
+      method: 'POST',
+      body: stream,
+      duplex: 'half',
+      headers: { 'Content-Length': '1' }, // A false declaration must not bypass the streaming limit.
+    }),
+  );
+  assert.equal(response.status, 413);
+  assert.deepEqual(await response.json(), { error: 'Request is too large.' });
+  assert.equal(cancelled, true);
+  assert.equal(reads, 3);
+
+  let earlyReads = 0,
+    earlyCancelled = false;
+  const early = new ReadableStream(
+    {
+      pull() {
+        earlyReads++;
+      },
+      cancel() {
+        earlyCancelled = true;
+      },
+    },
+    { highWaterMark: 0 },
+  );
+  const rejected = await worker.fetch(
+    new Request('https://example.com/generate', {
+      method: 'POST',
+      body: early,
+      duplex: 'half',
+      headers: { 'Content-Length': '16385' },
+    }),
+  );
+  assert.equal(rejected.status, 413);
+  assert.equal(earlyReads, 0);
+  assert.equal(earlyCancelled, true);
+});
+
+test('streaming accepts exactly 16 KB and handles split UTF-8 and failed reads', async () => {
+  const payload = JSON.stringify({ steps: ['Build é', 'Test', 'Ship'] });
+  const bytes = new TextEncoder().encode(
+    payload + ' '.repeat(16384 - new TextEncoder().encode(payload).length),
+  );
+  let cursor = 0;
+  const response = await worker.fetch(
+    new Request('https://example.com/generate', {
+      method: 'POST',
+      duplex: 'half',
+      body: new ReadableStream({
+        pull(controller) {
+          if (cursor === bytes.length) controller.close();
+          else controller.enqueue(bytes.subarray(cursor, ++cursor));
+        },
+      }),
+    }),
+  );
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).config.steps[0], 'Build é');
+  const oversized = await worker.fetch(
+    new Request('https://example.com/generate', {
+      method: 'POST',
+      body: 'é'.repeat(8193),
+    }),
+  );
+  assert.equal(oversized.status, 413);
+  const failed = await worker.fetch(
+    new Request('https://example.com/generate', {
+      method: 'POST',
+      duplex: 'half',
+      body: new ReadableStream({
+        start(controller) {
+          controller.error(Error('Disconnected'));
+        },
+      }),
+    }),
+  );
+  assert.equal(failed.status, 400);
+});
+
 test('Vercel adapters preserve URL settings, request bodies and HTTP methods', async () => {
   const response = await svgRoute.fetch(
     new Request('https://example.com/api/svg?steps=Build;Test;Ship&traveler=rocket'),

@@ -4,6 +4,64 @@ import { normalizeConfig, renderSvg, workflowGeometry, LAYOUTS } from '../src/sv
 import { workflowParams, parseWorkflowParams } from '../src/links.js';
 import { generateWorkflow, workflowSchema } from '../mcp/server.mjs';
 
+test('partial positions always normalize to a complete, bounded canvas and survive editing', () => {
+  for (const canvasSize of [
+    null,
+    undefined,
+    { width: 220, height: 204 },
+    { width: NaN, height: -1 },
+  ]) {
+    const config = normalizeConfig({
+      steps: ['Build', 'Test', 'Ship'],
+      positions: [{ x: 800, y: 700 }, null],
+      canvasSize,
+      title: 'Release',
+      subtitle: 'With checks',
+    });
+    assert.equal(config.positions.length, 3);
+    assert.ok(config.positions.every((p) => p && Number.isFinite(p.x) && p.y >= 146));
+    for (const p of config.positions) {
+      assert.ok(p.x + 80 <= config.canvasSize.width);
+      assert.ok(p.y + 70 <= config.canvasSize.height);
+    }
+    assert.deepEqual(normalizeConfig(config), config);
+    config.steps.push('Monitor');
+    config.positions.push({ x: 800, y: 850 });
+    const added = normalizeConfig(config);
+    assert.equal(added.positions.length, 4);
+    assert.ok(added.canvasSize.height >= 920);
+    assert.deepEqual(normalizeConfig(parseWorkflowParams(workflowParams(added))), added);
+  }
+  for (const raw of [
+    null,
+    12,
+    [],
+    'bad',
+    { positions: [null] },
+    { positions: [{ x: Infinity, y: 10 }] },
+  ])
+    assert.deepEqual(normalizeConfig(raw).positions, []);
+});
+
+test('routing reacts to node and edge changes but appearance changes preserve paths', () => {
+  const input = { preset: 'review', title: 'Routing' };
+  const paths = (value) =>
+    [...renderSvg(value).matchAll(/<g data-connection="[^"]+"><path d="([^"]+)"/g)].map(
+      (match) => match[1],
+    );
+  const original = paths(input);
+  assert.deepEqual(paths({ ...input, theme: 'dark', font: 'mono', duration: 25 }), original);
+  const geometry = workflowGeometry(input);
+  const moved = {
+    ...input,
+    positions: geometry.nodes.map((p, i) => ({ ...p, x: p.x + (i ? 0 : 20) })),
+  };
+  assert.notDeepEqual(paths(moved), original);
+  assert.notDeepEqual(paths({ ...input, routing: 'straight' }), original);
+  assert.equal(paths({ ...input, connectionMode: 'custom', connections: [] }).length, 0);
+  assert.deepEqual(paths(input), original);
+});
+
 test('layouts keep twelve cards inside their canvas and snake rows reverse direction', () => {
   for (const layout of Object.keys(LAYOUTS))
     for (const columns of [2, 3, 4, 6])
