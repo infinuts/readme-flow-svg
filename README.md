@@ -129,6 +129,7 @@ npm run benchmark
 | Repository | Workflow |
 | --- | --- |
 | [infinuts/readme-flow-svg](https://github.com/infinuts/readme-flow-svg#readme) | The workflow generator uses its own animated SVG in its README. |
+| [infinuts/port2browser](https://github.com/infinuts/port2browser#readme) | This project uses this animated SVG project to demonstrate how the ai skill works. |
 
 <!-- community-showcase:end -->
 
